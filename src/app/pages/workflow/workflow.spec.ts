@@ -7,7 +7,9 @@ describe('WorkflowPage', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     http = TestBed.inject(HttpTestingController);
   });
 
@@ -20,7 +22,15 @@ describe('WorkflowPage', () => {
 
     const req = http.expectOne('/api/v1/sync-jobs');
     expect(req.request.body.sources).toEqual(['qase']);
-    req.flush({ id: 'job-1', trigger: 'manual', status: 'queued', requestedAt: '', startedAt: null, finishedAt: null, steps: [] });
+    req.flush({
+      id: 'job-1',
+      trigger: 'manual',
+      status: 'queued',
+      requestedAt: '',
+      startedAt: null,
+      finishedAt: null,
+      steps: [],
+    });
 
     const jobReq = http.expectOne('/api/v1/sync-jobs/job-1');
     jobReq.flush({ asOf: null, sources: {}, data: { id: 'job-1', status: 'done', steps: [] } });

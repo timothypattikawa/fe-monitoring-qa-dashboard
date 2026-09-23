@@ -1,8 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DashboardState } from '../../core/dashboard-state';
 import { DashboardApiService } from '../../core/dashboard-api.service';
 import { LiveDashboardStore } from '../../core/live-dashboard.store';
+import { createSyncRunner } from '../../core/sync-runner';
 
 @Component({
   selector: 'app-bugs',
@@ -17,29 +18,15 @@ export class BugsPage {
   readonly syncing = signal(false);
   readonly syncError = signal('');
 
-  sync() {
-    this.syncing.set(true);
-    this.syncError.set('');
-    this.api.sync(this.live.managerKey(), ['jira']).subscribe({
-      next: (job) => this.pollUntilDone(job.id),
-      error: () => {
-        this.syncing.set(false);
-        this.syncError.set('Could not queue sync.');
-      },
-    });
-  }
+  private readonly syncRunner = createSyncRunner(
+    this.api,
+    this.live,
+    inject(DestroyRef),
+    this.syncing,
+    this.syncError,
+  );
 
-  private pollUntilDone(jobId: string) {
-    const poll = () => this.api.job(jobId).subscribe(({ data }) => {
-      if (data.status === 'queued' || data.status === 'running') {
-        setTimeout(poll, 2000);
-        return;
-      }
-      this.syncing.set(false);
-      const failedStep = data.steps?.find((s) => s.status === 'failed');
-      this.syncError.set(failedStep ? `Sync failed: ${failedStep.errorCode}` : '');
-      this.live.refresh();
-    });
-    poll();
+  sync() {
+    this.syncRunner.sync(['jira']);
   }
 }
