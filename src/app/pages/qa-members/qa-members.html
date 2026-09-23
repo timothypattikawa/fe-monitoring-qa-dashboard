@@ -8,39 +8,41 @@
       <p>Roster used to populate the QA owner field across projects.</p>
     </div>
   </div>
-  <form class="form-grid" (ngSubmit)="save()">
-    <label
-      >Name
-      <input
-        name="name"
-        required
-        [ngModel]="draft().name"
-        (ngModelChange)="draft.set({ ...draft(), name: $event })"
-    /></label>
-    <label
-      >Jira account ID
-      <input
-        name="jiraAccountId"
-        [ngModel]="draft().jiraAccountId"
-        (ngModelChange)="draft.set({ ...draft(), jiraAccountId: $event })"
-    /></label>
-    <label
-      >Qase member ID
-      <input
-        name="qaseMemberId"
-        [ngModel]="draft().qaseMemberId"
-        (ngModelChange)="draft.set({ ...draft(), qaseMemberId: $event })"
-    /></label>
-    <label
-      >Weekly capacity hours
-      <input
-        name="weeklyCapacityHours"
-        type="number"
-        min="0"
-        required
-        [ngModel]="draft().weeklyCapacityHours"
-        (ngModelChange)="draft.set({ ...draft(), weeklyCapacityHours: $event })"
-    /></label>
+  <form (ngSubmit)="save()">
+    <div class="form-grid">
+      <label
+        >Name
+        <input
+          name="name"
+          required
+          [ngModel]="draft().name"
+          (ngModelChange)="draft.set({ ...draft(), name: $event })"
+      /></label>
+      <label
+        >Jira account ID
+        <input
+          name="jiraAccountId"
+          [ngModel]="draft().jiraAccountId"
+          (ngModelChange)="draft.set({ ...draft(), jiraAccountId: $event })"
+      /></label>
+      <label
+        >Qase member ID
+        <input
+          name="qaseMemberId"
+          [ngModel]="draft().qaseMemberId"
+          (ngModelChange)="draft.set({ ...draft(), qaseMemberId: $event })"
+      /></label>
+      <label
+        >Weekly capacity hours
+        <input
+          name="weeklyCapacityHours"
+          type="number"
+          min="0"
+          required
+          [ngModel]="draft().weeklyCapacityHours"
+          (ngModelChange)="draft.set({ ...draft(), weeklyCapacityHours: $event })"
+      /></label>
+    </div>
     <div class="dialog-actions">
       @if (editingId()) {
         <button type="button" class="secondary" [disabled]="saving()" (click)="cancelEdit()">Cancel</button>
