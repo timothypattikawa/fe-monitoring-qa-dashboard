@@ -1,0 +1,507 @@
+<dialog (close)="state.selectedMember.set(null)" #qaDetail class="qa-detail-dialog" aria-labelledby="qa-detail-title">
+  @if (state.selectedMember(); as m) {
+    @let activity = state.memberExecution(m.name);
+    <div class="dialog-heading qa-profile-heading">
+      <div class="owner">
+        <span class="avatar" [class]="'avatar ' + m.color">{{ m.initials }}</span>
+        <div>
+          <p class="eyebrow">QA EXECUTION DETAIL</p>
+          <h2 id="qa-detail-title">{{ m.name }}</h2>
+          <small>{{ m.role }} · Qase activity on 16 Sep 2026</small>
+        </div>
+      </div>
+      <button class="close" aria-label="Close execution detail" (click)="qaDetail.close()">
+        ×
+      </button>
+    </div>
+    <div class="qa-kpis">
+      <div>
+        <small>TESTS EXECUTED</small><strong>{{ activity.executed }}</strong
+        ><span>Passed + failed</span>
+      </div>
+      <div>
+        <small>ACTIVE RUNS</small><strong>{{ activity.runs }}</strong
+        ><span>Recorded in Qase</span>
+      </div>
+      <div>
+        <small>ACTIVE PROJECTS</small><strong>{{ activity.projects }}</strong
+        ><span>Touched today</span>
+      </div>
+      <div>
+        <small>PASS RATE</small><strong>{{ state.percent(activity.passed, activity.executed) }}%</strong
+        ><span>Of executed tests</span>
+      </div>
+    </div>
+    <div class="execution-outcome-strip">
+      <span
+        ><b>{{ activity.passed }}</b> Passed</span
+      >
+      <span
+        ><b>{{ activity.failed }}</b> Failed</span
+      >
+      <span
+        ><b>{{ activity.blocked }}</b> Blocked</span
+      >
+      <span
+        ><b>{{ activity.notRun }}</b> Not run</span
+      >
+    </div>
+    <section class="panel execution-history-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Today’s project and test-run activity</h2>
+          <p>Recorded execution for {{ m.name }} from Qase.</p>
+        </div>
+        <span class="source-tag">{{ activity.runs }} runs</span>
+      </div>
+      <div class="table-scroll">
+        <table class="execution-log-table">
+          <thead>
+            <tr>
+              <th>PROJECT</th>
+              <th>RUN / SCOPE</th>
+              <th>ENVIRONMENT</th>
+              <th>PASSED</th>
+              <th>FAILED</th>
+              <th>BLOCKED</th>
+              <th>NOT RUN</th>
+              <th>EXECUTED</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (run of state.memberRuns(m.name); track run.id) {
+              <tr>
+                <td>
+                  <strong>{{ run.key }}</strong
+                  ><small>{{ run.projectName }}</small>
+                </td>
+                <td>
+                  <strong>{{ run.id }}</strong
+                  ><small>{{ run.scope }}</small>
+                </td>
+                <td>
+                  <span class="environment-tag">{{ run.environment }}</span>
+                </td>
+                <td class="success-text">{{ run.passed }}</td>
+                <td class="red-text">{{ run.failed }}</td>
+                <td>{{ run.blocked }}</td>
+                <td>{{ run.total - run.passed - run.failed - run.blocked }}</td>
+                <td>
+                  <strong>{{ run.passed + run.failed }}</strong>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <p class="workload-method-note">
+      Workload here means observed execution throughput, not an overload score. Qase test counts do
+      not reliably measure effort because case complexity and execution time differ.
+    </p>
+    <div class="dialog-actions">
+      <button class="secondary" (click)="qaDetail.close()">Close</button>
+    </div>
+  }
+</dialog>
+<dialog (close)="state.selected.set(null)" #detail class="detail-dialog" aria-labelledby="detail-title">
+  @if (state.selected(); as p) {
+    <div class="dialog-heading">
+      <div>
+        <p class="eyebrow">PROJECT DETAIL · {{ p.key }} · {{ p.code }}</p>
+        <h2 id="detail-title">{{ p.name }}</h2>
+      </div>
+      <button class="close" aria-label="Close project detail" (click)="detail.close()">×</button>
+    </div>
+    <p class="subtitle">
+      {{ p.qa }} · STG {{ p.stagingStart }} — {{ p.stagingEnd }} · BETA {{ p.betaStart }} —
+      {{ p.betaEnd }} · Demo data
+    </p>
+    <div class="project-summary-strip">
+      <div>
+        <small>DOMAIN</small><strong>{{ p.domain }}</strong>
+      </div>
+      <div>
+        <small>SPRINT / SIZE</small><strong>{{ p.sprint }} · {{ p.size }}</strong>
+      </div>
+      <div>
+        <small>TARGET VERSION</small><strong>{{ p.version }}</strong>
+      </div>
+      <div>
+        <small>ENVIRONMENT ETAs</small
+        ><strong>STG {{ p.stagingEta }} · BETA {{ p.betaEta }}</strong>
+      </div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Project detail sections">
+      @for (tab of state.detailTabs; track tab.id) {
+        <button
+          role="tab"
+          [attr.aria-selected]="state.detailTab() === tab.id"
+          [class.chosen]="state.detailTab() === tab.id"
+          (click)="state.detailTab.set(tab.id)"
+        >
+          {{ tab.label }}
+        </button>
+      }
+    </div>
+    @if (state.detailTab() === 'Testing') {
+      <div class="execution-summary">
+        <div
+          class="execution-donut"
+          role="img"
+          [attr.aria-label]="'Execution ' + state.percent(p.passed + p.failed, p.total) + '%'"
+          [style.background]="state.testDistribution(p)"
+        >
+          <div>
+            <strong>{{ state.percent(p.passed + p.failed, p.total) }}%</strong>
+            <small>Executed</small>
+          </div>
+        </div>
+        <div class="detail-stats">
+          <div class="passed-stat">
+            <strong>{{ p.passed }}</strong
+            >Passed
+          </div>
+          <div class="failed-stat">
+            <strong>{{ p.failed }}</strong
+            >Failed
+          </div>
+          <div class="blocked-stat">
+            <strong>{{ p.blocked }}</strong
+            >Blocked
+          </div>
+          <div class="not-run-stat">
+            <strong>{{ p.total - p.passed - p.failed - p.blocked }}</strong
+            >Not run
+          </div>
+        </div>
+      </div>
+      <p class="dialog-note">
+        Execution: {{ p.total ? state.percent(p.passed + p.failed, p.total) + '%' : 'N/A' }} · Pass rate:
+        {{ p.passed + p.failed ? state.percent(p.passed, p.passed + p.failed) + '%' : 'N/A' }}. Latest
+        result per instance; blocked and not-run tests are excluded from executed totals.
+      </p>
+      <h3 class="test-run-heading">Qase test runs</h3>
+      <div class="environment-grid">
+        <section>
+          <div class="environment-title">
+            <div>
+              <strong>STAGING</strong><span>{{ p.staging }}%</span>
+            </div>
+            <span class="health-pill" [attr.data-status]="state.environmentHealth(p, 'STAGING')">{{
+              state.environmentHealth(p, 'STAGING')
+            }}</span>
+          </div>
+          <div class="progress"><i [style.width.%]="p.staging"></i></div>
+          <div class="environment-facts">
+            <span>Velocity {{ p.velocity }}%/day</span
+            ><span>Required {{ p.requiredVelocity }}%/day</span><span>ETA {{ p.stagingEta }}</span
+            ><span>{{ state.timeRemaining(p.stagingDaysLeft) }}</span>
+          </div>
+          <div class="test-run-list">
+            @for (run of state.projectRuns(p, 'STAGING'); track run.id) {
+              <article class="test-run-item">
+                <div class="run-meta">
+                  <span class="ticket">{{ run.id }}</span>
+                </div>
+                <strong>{{ run.scope }}</strong>
+                <div class="progress-label">
+                  <span>{{ run.passed }} passed · {{ run.failed }} failed</span
+                  ><span>{{ state.percent(run.passed + run.failed, run.total) }}%</span>
+                </div>
+                <div class="progress">
+                  <i [style.width.%]="state.percent(run.passed, run.total)"></i
+                  ><i class="failed" [style.width.%]="state.percent(run.failed, run.total)"></i>
+                </div>
+                <small
+                  >{{ run.blocked }} blocked ·
+                  {{ run.total - run.passed - run.failed - run.blocked }} not run ·
+                  {{ run.elapsed }}</small
+                >
+              </article>
+            } @empty {
+              <p class="empty">No test runs</p>
+            }
+          </div>
+        </section>
+        <section>
+          <div class="environment-title">
+            <div>
+              <strong>BETA</strong><span>{{ p.beta }}%</span>
+            </div>
+            <span class="health-pill" [attr.data-status]="state.environmentHealth(p, 'BETA')">{{
+              state.environmentHealth(p, 'BETA')
+            }}</span>
+          </div>
+          <div class="progress"><i class="beta-progress" [style.width.%]="p.beta"></i></div>
+          <div class="environment-facts">
+            <span>{{ p.total - p.passed - p.failed - p.blocked }} remaining</span
+            ><span>ETA {{ p.betaEta }}</span
+            ><span>{{ state.timeRemaining(p.betaDaysLeft) }}</span>
+          </div>
+          <div class="test-run-list">
+            @for (run of state.projectRuns(p, 'BETA'); track run.id) {
+              <article class="test-run-item">
+                <div class="run-meta">
+                  <span class="ticket">{{ run.id }}</span>
+                </div>
+                <strong>{{ run.scope }}</strong>
+                <div class="progress-label">
+                  <span>{{ run.passed }} passed · {{ run.failed }} failed</span
+                  ><span>{{ state.percent(run.passed + run.failed, run.total) }}%</span>
+                </div>
+                <div class="progress">
+                  <i [style.width.%]="state.percent(run.passed, run.total)"></i
+                  ><i class="failed" [style.width.%]="state.percent(run.failed, run.total)"></i>
+                </div>
+                <small
+                  >{{ run.blocked }} blocked ·
+                  {{ run.total - run.passed - run.failed - run.blocked }} not run ·
+                  {{ run.elapsed }}</small
+                >
+              </article>
+            } @empty {
+              <p class="empty">No test runs</p>
+            }
+          </div>
+        </section>
+      </div>
+    }
+    @if (state.detailTab() === 'Team Progress') {
+      <section class="testcase-authorship-panel">
+        <div class="section-title">
+          <div>
+            <h2>Test cases created in Qase</h2>
+            <span>Creator ownership is separate from who executes the runs below.</span>
+          </div>
+          <strong>{{ p.total }} total test cases</strong>
+        </div>
+        <div class="testcase-author-list">
+          @for (author of p.testCaseAuthors; track author.name) {
+            <article>
+              <span class="project-avatar">{{ state.initials(author.name) }}</span>
+              <div class="testcase-author-copy">
+                <strong>{{ author.name }}</strong>
+                <small>{{ state.percent(author.count, p.total) }}% of project scope</small>
+                <div
+                  class="execution-track author-share-track"
+                  role="progressbar"
+                  [attr.aria-label]="author.name + ' created test cases'"
+                  [attr.aria-valuenow]="author.count"
+                  aria-valuemin="0"
+                  [attr.aria-valuemax]="p.total"
+                >
+                  <i [style.width.%]="state.percent(author.count, p.total)"></i>
+                </div>
+              </div>
+              <div class="testcase-author-count">
+                <strong>{{ author.count }}</strong>
+                <small>created</small>
+              </div>
+            </article>
+          } @empty {
+            <p class="empty">No Qase creator data</p>
+          }
+        </div>
+      </section>
+      <section class="project-detail-trend">
+        <div class="section-title">
+          <div>
+            <h2>Daily execution trend</h2>
+            <span>Five recent workdays by assignee · Qase demonstration dataset</span>
+          </div>
+          <div class="chart-legend" aria-label="Assignee legend">
+            @for (name of state.projectAssignees(p); track name; let personIndex = $index) {
+              <span
+                ><i [style.background]="state.seriesColors[personIndex % state.seriesColors.length]"></i
+                >{{ name }}</span
+              >
+            }
+          </div>
+        </div>
+        <div class="grouped-chart-scroll detail-trend-scroll">
+          <div
+            class="grouped-chart project-detail-trend-chart"
+            role="img"
+            [attr.aria-label]="'Daily test execution by assignee for ' + p.name"
+          >
+            <div class="chart-grid-lines" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            @for (date of state.chartDates; track date; let dayIndex = $index) {
+              <div class="bar-group">
+                <div class="bar-cluster">
+                  @for (name of state.projectAssignees(p); track name; let personIndex = $index) {
+                    @let value = state.projectChartValue(p, name, dayIndex);
+                    <button
+                      class="chart-bar"
+                      [style.height.%]="state.percent(value, state.projectChartMax(p))"
+                      [style.background]="state.seriesColors[personIndex % state.seriesColors.length]"
+                      [attr.aria-label]="date + ', ' + name + ': ' + value + ' executed'"
+                      [attr.data-tip]="name + ' · ' + value"
+                    ></button>
+                  }
+                </div>
+                <span>{{ date }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+      <section class="assignee-progress-panel">
+        <div class="section-title">
+          <h2>Execution progress by assignee</h2>
+          <span>Runner ownership from the latest Qase test runs</span>
+        </div>
+        <div class="assignee-progress-list">
+          @for (name of state.projectAssignees(p); track name) {
+            @let activity = state.memberExecution(name, p);
+            <article>
+              <span class="project-avatar">{{ state.initials(name) }}</span>
+              <div class="assignee-progress-copy">
+                <strong>{{ name }}</strong>
+                <small
+                  >{{ activity.runs }} runs · {{ activity.executed }} executed ·
+                  {{ activity.total }} assigned</small
+                >
+                <div class="execution-track">
+                  <i [style.width.%]="state.percent(activity.executed, activity.total)"></i>
+                </div>
+              </div>
+              <div class="assignee-result">
+                <strong>{{ state.percent(activity.executed, activity.total) }}%</strong>
+                <small>{{ activity.passed }} passed · {{ activity.failed }} failed</small>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+      <section class="panel execution-history-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Detailed execution history</h2>
+            <p>Who ran each scope and the latest Qase outcome.</p>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="execution-log-table">
+            <thead>
+              <tr>
+                <th>DATE</th>
+                <th>PIC</th>
+                <th>RUN / SCOPE</th>
+                <th>ENVIRONMENT</th>
+                <th>PASSED</th>
+                <th>FAILED</th>
+                <th>BLOCKED</th>
+                <th>NOT RUN</th>
+                <th>EXECUTED</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (run of p.testRuns; track run.id) {
+                <tr>
+                  <td>
+                    <strong>{{ run.date }}</strong>
+                  </td>
+                  <td>
+                    <strong>{{ run.owner }}</strong>
+                  </td>
+                  <td>
+                    <strong>{{ run.id }}</strong
+                    ><small>{{ run.scope }}</small>
+                  </td>
+                  <td>
+                    <span class="environment-tag">{{ run.environment }}</span>
+                  </td>
+                  <td class="success-text">{{ run.passed }}</td>
+                  <td class="red-text">{{ run.failed }}</td>
+                  <td>{{ run.blocked }}</td>
+                  <td>{{ run.total - run.passed - run.failed - run.blocked }}</td>
+                  <td>
+                    <strong>{{ run.passed + run.failed }}</strong>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+    @if (state.detailTab() === 'Bugs') {
+      <div class="detail-stats">
+        <div>
+          <strong>{{ p.bugs }}</strong
+          >Total created
+        </div>
+        <div>
+          <strong>{{ p.critical }}</strong
+          >Critical open
+        </div>
+        <div>
+          <strong>{{ p.stagingBugs }}</strong
+          >Staging
+        </div>
+        <div>
+          <strong>{{ p.betaBugs }}</strong
+          >Beta
+        </div>
+        <div>
+          <strong>{{ p.escapedBugs }}</strong
+          >Escaped
+        </div>
+      </div>
+      <p class="dialog-note">
+        Beta share: {{ state.percent(p.betaBugs, p.bugs) }}% · Escape ratio:
+        {{ state.percent(p.escapedBugs, p.bugs) }}% · {{ p.canceledBugs }} canceled. Attributed creator:
+        {{ p.qa }} and linked through {{ p.key }}.
+      </p>
+      <div class="jira-board-heading">
+        <div class="environment-switch" role="group" aria-label="Bug environment">
+          <button
+            [class.chosen]="state.bugEnvironment() === 'STAGING'"
+            (click)="state.bugEnvironment.set('STAGING')"
+          >
+            Staging
+          </button>
+          <button [class.chosen]="state.bugEnvironment() === 'BETA'" (click)="state.bugEnvironment.set('BETA')">
+            Beta
+          </button>
+        </div>
+        <span class="source-tag">Jira · Sample</span>
+      </div>
+      <div class="jira-board">
+        @for (reporter of state.defectReporters(p.key); track reporter) {
+          <section class="jira-column">
+            <h3>{{ reporter }}</h3>
+            <span class="badge muted-badge"
+              >{{ state.reporterDefects(p.key, reporter).length }} issue</span
+            >
+            @for (bug of state.reporterDefects(p.key, reporter); track bug.key) {
+              <article class="jira-card">
+                <div class="jira-card-key">
+                  <span [class.red-text]="bug.severity === 'Critical'">◆</span>
+                  <strong>{{ bug.key }}</strong>
+                </div>
+                <h4>{{ bug.title }}</h4>
+                <p>
+                  Assignee: <strong>{{ bug.owner }}</strong> · Age: <strong>{{ bug.age }}</strong>
+                </p>
+                <span
+                  class="badge"
+                  [class.danger]="bug.severity === 'Critical'"
+                  [class.amber]="bug.status === 'Open' || bug.status === 'Reopened'"
+                  [class.success]="bug.status === 'Ready'"
+                  >{{ bug.status }}</span
+                >
+              </article>
+            }
+          </section>
+        } @empty {
+          <p class="empty">No Jira bugs for {{ state.bugEnvironment() }}.</p>
+        }
+      </div>
+    }
+    <div class="dialog-actions">
+      <button class="secondary" (click)="detail.close()">Close</button>
+    </div>
+  }
+</dialog>

@@ -105,8 +105,6 @@ export class DashboardState {
   ];
   readonly selected = signal<Project | null>(null);
   readonly selectedMember = signal<DashboardMember | null>(null);
-  readonly projectFormOpen = signal(false);
-  readonly reminderOpen = signal(false);
   readonly detailTab = signal('Testing');
   readonly detailTabs = [
     { id: 'Testing', label: 'Test execution' },
@@ -124,7 +122,6 @@ export class DashboardState {
   readonly bugStatus = signal('All statuses');
   readonly bugPageEnvironment = signal<'All environments' | Environment>('All environments');
   readonly feedback = signal('');
-  readonly notifications = signal<{ recipient: string; channel: string; message: string }[]>([]);
   readonly filtered = computed(() =>
     this.projects().filter(
       (p) =>
@@ -215,21 +212,6 @@ export class DashboardState {
   readonly workloadChartMax = computed(() =>
     Math.max(1, ...this.workloadMembers().map((member) => this.memberChartValue(member.name))),
   );
-  draft = {
-    key: '',
-    name: '',
-    qa: 'Nadia Putri',
-    stagingStart: '',
-    stagingEnd: '',
-    betaStart: '',
-    betaEnd: '',
-    code: '',
-  };
-  recipient = 'Nadia Putri';
-  channel = 'Email';
-  message =
-    'Hi Nadia, please update the blockers for INIT-2401 and the estimated completion date. Thank you.';
-  formError = '';
   private hasLoadedLiveData = false;
   useLiveData(snapshot: LiveSnapshot) {
     if (!this.hasLoadedLiveData) {
@@ -755,90 +737,5 @@ export class DashboardState {
     this.selected.set(p);
     this.detailTab.set('Testing');
     this.bugEnvironment.set('STAGING');
-  }
-  addProject() {
-    const key = this.draft.key.trim().toUpperCase();
-    if (
-      !/^[A-Z][A-Z0-9]*-\d+$/.test(key) ||
-      !this.draft.name.trim() ||
-      !this.draft.stagingStart ||
-      !this.draft.stagingEnd ||
-      !this.draft.betaStart ||
-      !this.draft.betaEnd ||
-      this.draft.stagingEnd < this.draft.stagingStart ||
-      this.draft.betaEnd < this.draft.betaStart
-    ) {
-      this.formError =
-        'Enter a valid ticket, name, and Staging/Beta dates. End dates cannot be before start dates.';
-      return;
-    }
-    if (this.projects().some((p) => p.key === key)) {
-      this.formError = 'This INIT ticket is already registered.';
-      return;
-    }
-    this.projects.update((items) => [
-      ...items,
-      {
-        ...this.draft,
-        key,
-        name: this.draft.name.trim(),
-        code: this.draft.code.trim().toUpperCase(),
-        status: 'Draft',
-        passed: 0,
-        failed: 0,
-        blocked: 0,
-        total: 0,
-        fresh: 0,
-        indexed: 0,
-        bugs: 0,
-        critical: 0,
-        domain: 'Not assigned',
-        sprint: 'Not planned',
-        size: 'TBD',
-        version: 'TBD',
-        staging: 0,
-        beta: 0,
-        velocity: 0,
-        requiredVelocity: 0,
-        stagingEta: this.draft.stagingEnd,
-        stagingDaysLeft: 0,
-        betaEta: this.draft.betaEnd,
-        betaDaysLeft: 0,
-        stagingBugs: 0,
-        betaBugs: 0,
-        canceledBugs: 0,
-        escapedBugs: 0,
-        docsReady: 0,
-        testCaseAuthors: [],
-        testRuns: [],
-      },
-    ]);
-    this.projectFormOpen.set(false);
-    this.formError = '';
-    this.feedback.set(`${key} was added. Jira verification and workload allocation are pending.`);
-    this.draft = {
-      key: '',
-      name: '',
-      qa: 'Nadia Putri',
-      stagingStart: '',
-      stagingEnd: '',
-      betaStart: '',
-      betaEnd: '',
-      code: '',
-    };
-  }
-  remind(name: string) {
-    this.recipient = name;
-    this.message = `Hi ${name.split(' ')[0]}, please update the testing progress and blockers for your current projects. Thank you.`;
-    this.reminderOpen.set(true);
-  }
-  simulate() {
-    if (!this.message.trim()) return;
-    this.notifications.update((items) => [
-      { recipient: this.recipient, channel: this.channel, message: this.message.trim() },
-      ...items,
-    ]);
-    this.reminderOpen.set(false);
-    this.feedback.set('Reminder simulation recorded. No email or Telegram message was sent.');
   }
 }
