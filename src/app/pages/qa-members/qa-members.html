@@ -84,6 +84,8 @@
               <button type="button" class="secondary" (click)="edit(m)">Edit</button>
               @if (m.active) {
                 <button type="button" class="secondary" (click)="deactivate(m)">Deactivate</button>
+              } @else {
+                <button type="button" class="secondary" (click)="reactivate(m)">Reactivate</button>
               }
             </td>
           </tr>

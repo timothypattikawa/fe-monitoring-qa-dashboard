@@ -69,9 +69,17 @@ export class QaMembersPage {
   }
 
   deactivate(member: QaMember) {
-    this.api.updateQaMember(member.id, { active: false }, this.live.managerKey()).subscribe({
+    this.setActive(member, false, 'Could not deactivate QA member.');
+  }
+
+  reactivate(member: QaMember) {
+    this.setActive(member, true, 'Could not reactivate QA member.');
+  }
+
+  private setActive(member: QaMember, active: boolean, errorMessage: string) {
+    this.api.updateQaMember(member.id, { active }, this.live.managerKey()).subscribe({
       next: () => this.load(),
-      error: () => this.error.set('Could not deactivate QA member.'),
+      error: () => this.error.set(errorMessage),
     });
   }
 
