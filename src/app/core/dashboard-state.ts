@@ -66,8 +66,8 @@ export class DashboardState {
       Record<string, { executed: number; passed: number; failed: number; blocked: number }>
     >
   >({});
-  readonly nav = ['Projects', 'Workflow', 'Workload', 'Bugs'];
-  readonly iconIds = ['projects', 'testing', 'workload', 'bugs'];
+  readonly nav = ['Projects', 'Workflow', 'Workload', 'Bugs', 'QA Members'];
+  readonly iconIds = ['projects', 'testing', 'workload', 'bugs', 'qa-members'];
   get members() {
     return this.memberData();
   }
@@ -440,6 +440,7 @@ export class DashboardState {
         'Qase execution volume, queue pressure, and planned-capacity utilization by QA across the testing period, not just today.',
       Testing: 'Latest execution results and active Qase runs across projects.',
       Bugs: 'Defect health by project, severity, reporter, and assignee.',
+      'QA Members': 'Roster of QA members used to populate the QA owner field.',
       'Knowledge RAG': 'Indexed QA knowledge, freshness, and source coverage.',
       Documentation: 'Release-document readiness by project and document type.',
       Notifications: 'Prepared follow-ups and simulated delivery history.',

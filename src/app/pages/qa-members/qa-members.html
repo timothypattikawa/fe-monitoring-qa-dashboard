@@ -1,0 +1,98 @@
+@if (error()) {
+  <p class="live-alert" role="alert">{{ error() }}</p>
+}
+<section class="panel spaced-panel">
+  <div class="panel-heading">
+    <div>
+      <h2>{{ editingId() ? 'Edit QA member' : 'Add QA member' }}</h2>
+      <p>Roster used to populate the QA owner field across projects.</p>
+    </div>
+  </div>
+  <form class="form-grid" (ngSubmit)="save()">
+    <label
+      >Name
+      <input
+        name="name"
+        required
+        [ngModel]="draft().name"
+        (ngModelChange)="draft.set({ ...draft(), name: $event })"
+    /></label>
+    <label
+      >Jira account ID
+      <input
+        name="jiraAccountId"
+        [ngModel]="draft().jiraAccountId"
+        (ngModelChange)="draft.set({ ...draft(), jiraAccountId: $event })"
+    /></label>
+    <label
+      >Qase member ID
+      <input
+        name="qaseMemberId"
+        [ngModel]="draft().qaseMemberId"
+        (ngModelChange)="draft.set({ ...draft(), qaseMemberId: $event })"
+    /></label>
+    <label
+      >Weekly capacity hours
+      <input
+        name="weeklyCapacityHours"
+        type="number"
+        min="0"
+        required
+        [ngModel]="draft().weeklyCapacityHours"
+        (ngModelChange)="draft.set({ ...draft(), weeklyCapacityHours: $event })"
+    /></label>
+    <div class="dialog-actions">
+      @if (editingId()) {
+        <button type="button" class="secondary" (click)="cancelEdit()">Cancel</button>
+      }
+      <button type="submit" class="primary">{{ editingId() ? 'Save changes' : 'Add member' }}</button>
+    </div>
+  </form>
+</section>
+<section class="panel spaced-panel">
+  <div class="panel-heading">
+    <div>
+      <h2>QA members</h2>
+      <p>Active and deactivated members.</p>
+    </div>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>NAME</th>
+          <th>JIRA ACCOUNT</th>
+          <th>QASE MEMBER</th>
+          <th>WEEKLY HOURS</th>
+          <th>STATUS</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of members(); track m.id) {
+          <tr>
+            <td>{{ m.name }}</td>
+            <td>{{ m.jiraAccountId || '—' }}</td>
+            <td>{{ m.qaseMemberId || '—' }}</td>
+            <td>{{ m.weeklyCapacityHours }}</td>
+            <td>
+              <span class="badge" [class.success]="m.active" [class.danger]="!m.active">
+                {{ m.active ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td>
+              <button type="button" class="secondary" (click)="edit(m)">Edit</button>
+              @if (m.active) {
+                <button type="button" class="secondary" (click)="deactivate(m)">Deactivate</button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty">No QA members yet.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
