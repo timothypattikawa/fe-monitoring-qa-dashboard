@@ -11,7 +11,14 @@ import { LiveDashboardStore } from './core/live-dashboard.store';
 
 @Component({
   selector: 'app-root',
-  imports: [DatePipe, FormsModule, RouterLink, RouterOutlet, DashboardDialogsComponent, LiveDashboardComponent],
+  imports: [
+    DatePipe,
+    FormsModule,
+    RouterLink,
+    RouterOutlet,
+    DashboardDialogsComponent,
+    LiveDashboardComponent,
+  ],
   templateUrl: './app.html',
 })
 export class App {
@@ -22,19 +29,28 @@ export class App {
 
   constructor() {
     this.live.connect();
-    this.router.events.pipe(filter(event => event instanceof NavigationEnd), takeUntilDestroyed()).subscribe(event => {
-      const route = event.urlAfterRedirects.split('/')[1];
-      const page = this.state.nav.find(item => item.toLowerCase() === route);
-      if (page) this.page.set(page);
-    });
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe((event) => {
+        const route = event.urlAfterRedirects.split('/')[1];
+        const page = this.state.nav.find((item) => slugify(item) === route);
+        if (page) this.page.set(page);
+      });
   }
 
   navigate(page: string) {
     this.page.set(page);
-    void this.router.navigate([page.toLowerCase()]);
+    void this.router.navigate([slugify(page)]);
   }
 
   openProjectForm() {
     this.live.projectFormOpen.set(true);
   }
+}
+
+function slugify(page: string): string {
+  return page.toLowerCase().replace(/\s+/g, '-');
 }
