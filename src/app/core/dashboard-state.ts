@@ -3,16 +3,35 @@ import type { Environment, Project, ProjectHealth, TestRun } from './dashboard.m
 import type { ApiBug, ApiProject, WorkflowDay, WorkloadData } from './dashboard-api.service';
 
 type DashboardMember = {
-  name: string; initials: string; role: string; hours: number; capacity: number;
-  scenarios: number; execution: number; docs: number; project: string; dailyTarget: number;
-  cumulative: number; dailyRuns: number; blocker: string;
+  name: string;
+  initials: string;
+  role: string;
+  hours: number;
+  capacity: number;
+  scenarios: number;
+  execution: number;
+  docs: number;
+  project: string;
+  dailyTarget: number;
+  cumulative: number;
+  dailyRuns: number;
+  blocker: string;
   jiraProjects: { active: number; total: number };
   qaseExecution: { yearToDate: number; activeProjects: number };
   color: string;
 };
 type DashboardDefect = {
-  key: string; init: string; title: string; domain: string; severity: string; cause: string;
-  age: string; status: string; environment: Environment | '—'; reporter: string; owner: string;
+  key: string;
+  init: string;
+  title: string;
+  domain: string;
+  severity: string;
+  cause: string;
+  age: string;
+  status: string;
+  environment: Environment | '—';
+  reporter: string;
+  owner: string;
 };
 type LiveSnapshot = {
   projects: ApiProject[];
@@ -27,16 +46,40 @@ export class DashboardState {
   private readonly defectData = signal<DashboardDefect[]>([]);
   private readonly chartDateData = signal(['10 Sep', '11 Sep', '14 Sep', '15 Sep', '16 Sep']);
   private readonly workloadDateData = signal([
-    '03 Sep', '04 Sep', '07 Sep', '08 Sep', '09 Sep', '10 Sep', '11 Sep', '14 Sep', '15 Sep', '16 Sep',
+    '03 Sep',
+    '04 Sep',
+    '07 Sep',
+    '08 Sep',
+    '09 Sep',
+    '10 Sep',
+    '11 Sep',
+    '14 Sep',
+    '15 Sep',
+    '16 Sep',
   ]);
-  private readonly workflowSeries = signal<Record<string, { date: string; exec: number; pass: number }[]>>({});
-  private readonly workloadSeries = signal<Record<string, Record<string, { executed: number; passed: number; failed: number; blocked: number }>>>({});
+  private readonly workflowSeries = signal<
+    Record<string, { date: string; exec: number; pass: number }[]>
+  >({});
+  private readonly workloadSeries = signal<
+    Record<
+      string,
+      Record<string, { executed: number; passed: number; failed: number; blocked: number }>
+    >
+  >({});
   readonly nav = ['Projects', 'Workflow', 'Workload', 'Bugs'];
   readonly iconIds = ['projects', 'testing', 'workload', 'bugs'];
-  get members() { return this.memberData(); }
-  get defects() { return this.defectData(); }
-  get chartDates() { return this.chartDateData(); }
-  get workloadDates() { return this.workloadDateData(); }
+  get members() {
+    return this.memberData();
+  }
+  get defects() {
+    return this.defectData();
+  }
+  get chartDates() {
+    return this.chartDateData();
+  }
+  get workloadDates() {
+    return this.workloadDateData();
+  }
   readonly projects = signal<Project[]>([]);
   readonly testRuns = computed(() =>
     this.projects().flatMap((project) =>
@@ -134,14 +177,14 @@ export class DashboardState {
   );
   readonly workloadSummary = computed(() => {
     const series = this.workloadSeries();
-    const days = Object.values(series).flatMap(member => Object.values(member));
+    const days = Object.values(series).flatMap((member) => Object.values(member));
     const passed = days.reduce((sum, day) => sum + day.passed, 0);
     const failed = days.reduce((sum, day) => sum + day.failed, 0);
     return {
       executed: passed + failed,
       runs: days.length,
-      activeMembers: Object.values(series).filter(member => Object.keys(member).length).length,
-      activeProjects: new Set(this.workloadRuns().map(run => run.key)).size,
+      activeMembers: Object.values(series).filter((member) => Object.keys(member).length).length,
+      activeProjects: new Set(this.workloadRuns().map((run) => run.key)).size,
       passRate: this.percent(passed, passed + failed),
     };
   });
@@ -187,21 +230,25 @@ export class DashboardState {
   message =
     'Hi Nadia, please update the blockers for INIT-2401 and the estimated completion date. Thank you.';
   formError = '';
-  isLive() { return true; }
   private hasLoadedLiveData = false;
   useLiveData(snapshot: LiveSnapshot) {
-    if (!this.hasLoadedLiveData) { this.hasLoadedLiveData = true; this.resetViewState(); }
-    const memberNames = new Map((snapshot.workload?.members ?? []).map(member => [member.id, member.name]));
+    if (!this.hasLoadedLiveData) {
+      this.hasLoadedLiveData = true;
+      this.resetViewState();
+    }
+    const memberNames = new Map(
+      (snapshot.workload?.members ?? []).map((member) => [member.id, member.name]),
+    );
     const bugsByProject = new Map<string, ApiBug[]>();
     for (const bug of snapshot.bugs) {
       bugsByProject.set(bug.projectId, [...(bugsByProject.get(bug.projectId) ?? []), bug]);
     }
-    const projectKeys = new Map(snapshot.projects.map(project => [project.id, project.jiraInitKey]));
-    const projects = snapshot.projects.map(project => this.mapProject(
-      project,
-      bugsByProject.get(project.id) ?? [],
-      memberNames,
-    ));
+    const projectKeys = new Map(
+      snapshot.projects.map((project) => [project.id, project.jiraInitKey]),
+    );
+    const projects = snapshot.projects.map((project) =>
+      this.mapProject(project, bugsByProject.get(project.id) ?? [], memberNames),
+    );
     this.projects.set(projects);
 
     const workflow: Record<string, { date: string; exec: number; pass: number }[]> = {};
@@ -216,76 +263,107 @@ export class DashboardState {
     }
     this.workflowSeries.set(workflow);
     this.chartDateData.set([
-      ...new Set(snapshot.workflowDays.map(day => day.date).sort().map(date => this.dateLabel(date))),
+      ...new Set(
+        snapshot.workflowDays
+          .map((day) => day.date)
+          .sort()
+          .map((date) => this.dateLabel(date)),
+      ),
     ]);
 
     const members = snapshot.workload?.members ?? [];
-    const workloadSeries: Record<string, Record<string, { executed: number; passed: number; failed: number; blocked: number }>> = {};
-    this.memberData.set(members.map((member, index) => {
-      workloadSeries[member.name] = Object.fromEntries(
-        member.dailyExecutions.map(day => [this.dateLabel(day.date), day]),
-      );
-      const owned = projects.filter(project => project.qa === member.name);
-      return {
-        name: member.name,
-        initials: this.initials(member.name),
-        role: 'QA Engineer',
-        hours: member.plannedHours,
-        capacity: member.capacityHours,
-        scenarios: 0,
-        execution: member.qaseExecutions,
-        docs: 0,
-        project: owned[0] ? `${owned[0].key} · ${owned[0].name}` : '—',
-        dailyTarget: 0,
-        cumulative: 0,
-        dailyRuns: member.dailyExecutions.length,
-        blocker: '',
-        jiraProjects: { active: owned.length, total: owned.length },
-        qaseExecution: { yearToDate: 0, activeProjects: member.qaseExecutions },
-        color: ['green-avatar', 'blue', 'orange'][index % 3],
-      };
-    }));
+    const workloadSeries: Record<
+      string,
+      Record<string, { executed: number; passed: number; failed: number; blocked: number }>
+    > = {};
+    this.memberData.set(
+      members.map((member, index) => {
+        workloadSeries[member.name] = Object.fromEntries(
+          member.dailyExecutions.map((day) => [this.dateLabel(day.date), day]),
+        );
+        const owned = projects.filter((project) => project.qa === member.name);
+        return {
+          name: member.name,
+          initials: this.initials(member.name),
+          role: 'QA Engineer',
+          hours: member.plannedHours,
+          capacity: member.capacityHours,
+          scenarios: 0,
+          execution: member.qaseExecutions,
+          docs: 0,
+          project: owned[0] ? `${owned[0].key} · ${owned[0].name}` : '—',
+          dailyTarget: 0,
+          cumulative: 0,
+          dailyRuns: member.dailyExecutions.length,
+          blocker: '',
+          jiraProjects: { active: owned.length, total: owned.length },
+          qaseExecution: { yearToDate: 0, activeProjects: member.qaseExecutions },
+          color: ['green-avatar', 'blue', 'orange'][index % 3],
+        };
+      }),
+    );
     this.workloadSeries.set(workloadSeries);
     this.workloadDateData.set([
-      ...new Set(members.flatMap(member => member.dailyExecutions.map(day => day.date)).sort().map(date => this.dateLabel(date))),
+      ...new Set(
+        members
+          .flatMap((member) => member.dailyExecutions.map((day) => day.date))
+          .sort()
+          .map((date) => this.dateLabel(date)),
+      ),
     ]);
 
-    this.defectData.set(snapshot.bugs.map(bug => ({
-      key: bug.key,
-      init: projectKeys.get(bug.projectId) ?? '—',
-      title: bug.summary,
-      domain: '—',
-      severity: this.severity(bug.severity),
-      cause: '—',
-      age: '—',
-      status: bug.status,
-      environment: '—',
-      reporter: bug.reporter || bug.creator || '—',
-      owner: bug.assignee || '—',
-    })));
+    this.defectData.set(
+      snapshot.bugs.map((bug) => ({
+        key: bug.key,
+        init: projectKeys.get(bug.projectId) ?? '—',
+        title: bug.summary,
+        domain: '—',
+        severity: this.severity(bug.severity),
+        cause: '—',
+        age: '—',
+        status: bug.status,
+        environment: '—',
+        reporter: bug.reporter || bug.creator || '—',
+        owner: bug.assignee || '—',
+      })),
+    );
   }
-  private mapProject(project: ApiProject, bugs: ApiBug[], memberNames: Map<string, string>): Project {
-    const testRuns = (project.runs ?? []).flatMap(run => {
+  private mapProject(
+    project: ApiProject,
+    bugs: ApiBug[],
+    memberNames: Map<string, string>,
+  ): Project {
+    const testRuns = (project.runs ?? []).flatMap((run) => {
       const environment = run.environment.toUpperCase();
       if (environment !== 'STAGING' && environment !== 'BETA') return [];
-      return [{
-        id: `RUN-${run.runId}`,
-        date: (run.finishedAt ?? run.startedAt ?? '').slice(0, 10),
-        environment: environment as Environment,
-        scope: run.scope || run.platform || run.title || '—',
-        owner: (memberNames.get(run.ownerId) ?? project.qaOwner) || '—',
-        passed: run.passed,
-        failed: run.failed,
-        blocked: run.blocked,
-        total: run.total,
-        elapsed: run.elapsedSeconds ? `${Math.round(run.elapsedSeconds / 60)}m` : '—',
-      }];
+      return [
+        {
+          id: `RUN-${run.runId}`,
+          date: (run.finishedAt ?? run.startedAt ?? '').slice(0, 10),
+          environment: environment as Environment,
+          scope: run.scope || run.platform || run.title || '—',
+          owner: (memberNames.get(run.ownerId) ?? project.qaOwner) || '—',
+          passed: run.passed,
+          failed: run.failed,
+          blocked: run.blocked,
+          total: run.total,
+          elapsed: run.elapsedSeconds ? `${Math.round(run.elapsedSeconds / 60)}m` : '—',
+        },
+      ];
     });
-    const stats = (environment: Environment) => testRuns.filter(run => run.environment === environment)
-      .reduce((sum, run) => ({ executed: sum.executed + run.passed + run.failed, total: sum.total + run.total }), { executed: 0, total: 0 });
+    const stats = (environment: Environment) =>
+      testRuns
+        .filter((run) => run.environment === environment)
+        .reduce(
+          (sum, run) => ({
+            executed: sum.executed + run.passed + run.failed,
+            total: sum.total + run.total,
+          }),
+          { executed: 0, total: 0 },
+        );
     const staging = stats('STAGING');
     const beta = stats('BETA');
-    const critical = bugs.filter(bug => this.severity(bug.severity) === 'Critical').length;
+    const critical = bugs.filter((bug) => this.severity(bug.severity) === 'Critical').length;
     return {
       key: project.jiraInitKey,
       name: project.name,
@@ -318,19 +396,24 @@ export class DashboardState {
       betaDaysLeft: this.daysUntil(project.betaEndAt),
       stagingBugs: 0,
       betaBugs: 0,
-      canceledBugs: bugs.filter(bug => bug.status.toLowerCase().includes('cancel')).length,
+      canceledBugs: bugs.filter((bug) => bug.status.toLowerCase().includes('cancel')).length,
       escapedBugs: 0,
       docsReady: 0,
       testCaseAuthors: [],
       testRuns,
     };
   }
-  private dateOnly(value: string) { return value ? value.slice(0, 10) : ''; }
+  private dateOnly(value: string) {
+    return value ? value.slice(0, 10) : '';
+  }
   private dateLabel(value: string) {
     if (!value) return '—';
-    const parts = new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'short', timeZone: 'UTC' })
-      .formatToParts(new Date(`${value.slice(0, 10)}T00:00:00Z`));
-    return `${parts.find(part => part.type === 'day')?.value} ${parts.find(part => part.type === 'month')?.value}`;
+    const parts = new Intl.DateTimeFormat('en-US', {
+      day: '2-digit',
+      month: 'short',
+      timeZone: 'UTC',
+    }).formatToParts(new Date(`${value.slice(0, 10)}T00:00:00Z`));
+    return `${parts.find((part) => part.type === 'day')?.value} ${parts.find((part) => part.type === 'month')?.value}`;
   }
   private daysUntil(value: string) {
     if (!value) return 0;
@@ -338,7 +421,8 @@ export class DashboardState {
   }
   private severity(value: string) {
     const severity = value.toLowerCase();
-    if (severity.includes('critical') || severity.includes('blocker') || severity === 'highest') return 'Critical';
+    if (severity.includes('critical') || severity.includes('blocker') || severity === 'highest')
+      return 'Critical';
     if (severity.includes('major') || severity === 'high') return 'Major';
     if (severity.includes('minor') || severity === 'low' || severity === 'lowest') return 'Minor';
     return '—';
@@ -464,7 +548,11 @@ export class DashboardState {
       executed: passed + failed,
       notRun: 0,
       total: passed + failed + blocked,
-      projects: new Set(this.workloadRuns().filter(run => run.owner === name).map(run => run.key)).size,
+      projects: new Set(
+        this.workloadRuns()
+          .filter((run) => run.owner === name)
+          .map((run) => run.key),
+      ).size,
     };
   }
   memberChartValue(name: string) {
@@ -552,11 +640,10 @@ export class DashboardState {
     const max = 150;
     if (!this.workloadDates.length) return '';
     const stepX = this.workloadDates.length === 1 ? 0 : 100 / (this.workloadDates.length - 1);
-    const points = this.workloadDates
-      .map((_, i) => {
-        const value = Math.min(max, this.capacityTrendValue(name, i));
-        return `${Math.round(i * stepX)},${Math.round(32 - (value / max) * 32)}`;
-      })
+    const points = this.workloadDates.map((_, i) => {
+      const value = Math.min(max, this.capacityTrendValue(name, i));
+      return `${Math.round(i * stepX)},${Math.round(32 - (value / max) * 32)}`;
+    });
     return points.length === 1 ? `${points[0]} 100,${points[0].split(',')[1]}` : points.join(' ');
   }
   projectAssignees(project: Project) {
@@ -598,8 +685,9 @@ export class DashboardState {
   trendPoints(trend: { exec: number; pass: number }[], key: 'exec' | 'pass') {
     if (!trend.length) return '';
     const stepX = trend.length === 1 ? 0 : 100 / (trend.length - 1);
-    const points = trend
-      .map((d, i) => `${Math.round(i * stepX)},${Math.round(32 - (d[key] / 100) * 32)}`)
+    const points = trend.map(
+      (d, i) => `${Math.round(i * stepX)},${Math.round(32 - (d[key] / 100) * 32)}`,
+    );
     return points.length === 1 ? `${points[0]} 100,${points[0].split(',')[1]}` : points.join(' ');
   }
   isVisible(key: string) {
@@ -727,9 +815,7 @@ export class DashboardState {
     ]);
     this.projectFormOpen.set(false);
     this.formError = '';
-    this.feedback.set(
-      `${key} was added. Jira verification and workload allocation are pending.`,
-    );
+    this.feedback.set(`${key} was added. Jira verification and workload allocation are pending.`);
     this.draft = {
       key: '',
       name: '',

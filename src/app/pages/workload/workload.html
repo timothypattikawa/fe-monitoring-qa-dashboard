@@ -1,0 +1,358 @@
+        <section class="stats workload-kpis" aria-label="Ten-workday Qase execution summary">
+          <article>
+            <div class="stat-label">EXECUTIONS (10 WORKDAYS)</div>
+            <div class="stat-value">{{ state.workloadTrendTotal() }}</div>
+            <p>Selected metric and environment</p>
+          </article>
+          <article>
+            <div class="stat-label">ACTIVE QA</div>
+            <div class="stat-value">{{ state.workloadSummary().activeMembers }}</div>
+            <p>People with recorded execution</p>
+          </article>
+          <article>
+            <div class="stat-label">ACTIVE PROJECTS</div>
+            <div class="stat-value">{{ state.workloadSummary().activeProjects }}</div>
+            <p>Projects touched today</p>
+          </article>
+          <article>
+            <div class="stat-label">AVERAGE / WORKDAY</div>
+            <div class="stat-value">{{ state.averageWorkload() }}</div>
+            <p>Average selected activity per day</p>
+          </article>
+          <article>
+            <div class="stat-label">TEAM UTILIZATION</div>
+            <div class="stat-value">{{ state.teamUtilizationSummary().average }}%</div>
+            <p>{{ state.teamUtilizationSummary().overloaded }} QA over planned capacity</p>
+          </article>
+        </section>
+
+        <section class="panel spaced-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Planned capacity utilization</h2>
+              <p>
+                Allocated hours vs. available weekly capacity, trended across the last
+                {{ state.workloadDates.length }} workdays — this is real workload for the whole project
+                run, not just today's execution count.
+              </p>
+            </div>
+          </div>
+          <div
+            class="workload-chart"
+            role="img"
+            aria-label="Planned utilization by QA across the testing period"
+          >
+            @for (m of state.workloadMembers(); track m.name) {
+              @let cap = state.memberCapacity(m.name);
+              <div class="workload-chart-row" tabindex="0">
+                <div class="chart-person">
+                  <span class="avatar small" [class]="'avatar small ' + m.color">{{
+                    m.initials
+                  }}</span>
+                  <span
+                    ><strong>{{ m.name }}</strong
+                    ><small
+                      >{{ cap.allocated }}h allocated / {{ cap.capacity }}h capacity</small
+                    ></span
+                  >
+                </div>
+                <svg
+                  class="capacity-sparkline"
+                  viewBox="0 0 100 32"
+                  preserveAspectRatio="none"
+                  [attr.aria-label]="
+                    m.name +
+                    ' utilization trended from ' +
+                    state.capacityTrendValue(m.name, 0) +
+                    '% to ' +
+                    cap.utilization +
+                    '% across ' +
+                    state.workloadDates.length +
+                    ' workdays'
+                  "
+                >
+                  <polyline class="trend-line exec" [attr.points]="state.capacityTrendPoints(m.name)" />
+                </svg>
+                <strong class="chart-value">{{ cap.utilization }}%</strong>
+                <span
+                  class="pressure-pill"
+                  [attr.data-level]="
+                    cap.status === 'Overloaded'
+                      ? 'high'
+                      : cap.status === 'Within Capacity'
+                        ? 'steady'
+                        : 'watch'
+                  "
+                  >{{ cap.status }}</span
+                >
+              </div>
+            }
+          </div>
+          <p class="workload-method-note">
+            Planned utilization = allocated hours ÷ available weekly capacity (PRD FR-02).
+            Daily capacity snapshots are unavailable, so the trend remains empty.
+            The execution charts below measure Qase activity volume, not hours or overload.
+          </p>
+        </section>
+
+        <section class="panel workload-overview workload-daily-chart">
+          <div class="panel-heading">
+            <div>
+              <h2>Daily execution by QA</h2>
+              <p>Recorded workdays from Qase results stored in PostgreSQL.</p>
+            </div>
+            <div class="chart-controls">
+              <div class="metric-switch" role="group" aria-label="Daily chart metric">
+                @for (metric of ['Executed', 'Failed', 'Blocked']; track metric) {
+                  <button
+                    [class.active]="state.workloadTrendMetric() === metric"
+                    (click)="state.workloadTrendMetric.set($any(metric))"
+                  >
+                    {{ metric }}
+                  </button>
+                }
+              </div>
+              <label
+                ><span class="sr-only">Environment</span
+                ><select
+                  [ngModel]="state.workloadEnvironment()"
+                  (ngModelChange)="state.workloadEnvironment.set($event)"
+                >
+                  <option>All environments</option>
+                  <option>STAGING</option>
+                  <option>BETA</option>
+                </select></label
+              >
+            </div>
+          </div>
+          <div class="chart-legend centered" aria-label="QA chart legend">
+            @for (m of state.workloadMembers(); track m.name; let personIndex = $index) {
+              <span><i [style.background]="state.seriesColors[personIndex]"></i>{{ m.name }}</span>
+            }
+          </div>
+          <div class="grouped-chart-scroll workload-chart-scroll">
+            <div
+              class="grouped-chart workload-trend-chart"
+              role="img"
+              [attr.aria-label]="state.workloadTrendMetric() + ' Qase activity per QA over ten workdays'"
+            >
+              <div class="chart-grid-lines" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+              @for (date of state.workloadDates; track date; let dayIndex = $index) {
+                <div class="bar-group">
+                  <div class="bar-cluster">
+                    @for (m of state.workloadMembers(); track m.name; let personIndex = $index) {
+                      @let value = state.workloadTrendValue(m.name, dayIndex);
+                      <button
+                        class="chart-bar"
+                        [style.height.%]="state.percent(value, state.workloadTrendMax())"
+                        [style.background]="state.seriesColors[personIndex]"
+                        [attr.aria-label]="
+                          date +
+                          ', ' +
+                          m.name +
+                          ': ' +
+                          value +
+                          ' ' +
+                          state.workloadTrendMetric().toLowerCase()
+                        "
+                        [attr.data-tip]="m.name + ' · ' + value"
+                      ></button>
+                    }
+                  </div>
+                  <span>{{ date }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+
+        <section class="panel spaced-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>QA portfolio &amp; current activity</h2>
+              <p>
+                Jira project ownership and Qase execution volume per QA, separated from today’s run
+                results.
+              </p>
+            </div>
+            <span class="source-tag">Jira + Qase</span>
+          </div>
+          <div class="execution-person-grid">
+            @for (m of state.workloadMembers(); track m.name) {
+              @let activity = state.memberWorkloadExecution(m.name);
+              <article class="execution-person-card">
+                <header>
+                  <div class="owner">
+                    <span class="avatar" [class]="'avatar ' + m.color">{{ m.initials }}</span>
+                    <div>
+                      <strong>{{ m.name }}</strong
+                      ><small>{{ m.role }}</small>
+                    </div>
+                  </div>
+                  <span class="badge success">{{ m.jiraProjects.active }} active</span>
+                </header>
+                <div class="qa-portfolio-metrics">
+                  <div data-source="jira">
+                    <small>ACTIVE PROJECTS</small>
+                    <strong>{{ m.jiraProjects.active }}</strong>
+                    <span>Jira · not Done</span>
+                  </div>
+                  <div data-source="jira">
+                    <small>TOTAL PROJECTS</small>
+                    <strong>{{ m.jiraProjects.total }}</strong>
+                    <span>Jira · includes Done</span>
+                  </div>
+                  <div data-source="qase">
+                    <small>EXECUTED YTD</small>
+                    <strong>{{ state.formatNumber(m.qaseExecution.yearToDate) }}</strong>
+                    <span>Qase · includes Done</span>
+                  </div>
+                  <div data-source="qase">
+                    <small>ACTIVE EXECUTION</small>
+                    <strong>{{ state.formatNumber(m.qaseExecution.activeProjects) }}</strong>
+                    <span>Qase · active projects</span>
+                  </div>
+                </div>
+                <div class="activity-divider"><span>TODAY’S QASE EXECUTION</span></div>
+                <div class="person-primary-metric">
+                  <strong>{{ activity.executed }}</strong>
+                  <span>tests executed across {{ activity.projects }} projects</span>
+                </div>
+                <div class="person-metrics">
+                  <span
+                    ><b>{{ activity.passed }}</b> Passed</span
+                  >
+                  <span
+                    ><b>{{ activity.failed }}</b> Failed</span
+                  >
+                  <span
+                    ><b>{{ activity.blocked }}</b> Blocked</span
+                  >
+                  <span
+                    ><b>{{ activity.notRun }}</b> Not run</span
+                  >
+                </div>
+                <div class="execution-track" aria-label="Execution completion">
+                  <i [style.width.%]="state.percent(activity.executed, activity.total)"></i>
+                </div>
+                <div class="active-projects">
+                  @for (project of state.memberActiveProjects(m.name); track project[0]) {
+                    <span>{{ project[0] }} · {{ project[1] }}</span>
+                  }
+                </div>
+                <footer>
+                  <span>{{ activity.runs }} active test runs</span>
+                  <button class="secondary" (click)="state.openMember(m)">
+                    View QA activity ↗
+                  </button>
+                </footer>
+              </article>
+            }
+          </div>
+        </section>
+
+        <section class="panel spaced-panel workload-chart-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Execution load signal</h2>
+              <p>Compare observable Qase demand. This is not a timesheet or an hours estimate.</p>
+            </div>
+            <div class="metric-switch" role="group" aria-label="Workload chart metric">
+              @for (metric of ['Executed', 'Remaining', 'Blocked']; track metric) {
+                <button
+                  [class.active]="state.workloadMetric() === metric"
+                  (click)="state.workloadMetric.set($any(metric))"
+                >
+                  {{ metric }}
+                </button>
+              }
+            </div>
+          </div>
+          <div
+            class="workload-chart"
+            role="img"
+            [attr.aria-label]="state.workloadMetric() + ' tests by QA'"
+          >
+            @for (m of state.workloadMembers(); track m.name) {
+              @let value = state.memberChartValue(m.name);
+              @let pressure = state.workloadPressure(m.name);
+              <div class="workload-chart-row" tabindex="0">
+                <div class="chart-person">
+                  <span class="avatar small" [class]="'avatar small ' + m.color">{{
+                    m.initials
+                  }}</span>
+                  <span
+                    ><strong>{{ m.name }}</strong
+                    ><small>{{ pressure.note }}</small></span
+                  >
+                </div>
+                <div class="chart-track">
+                  <i [style.width.%]="state.percent(value, state.workloadChartMax())"></i>
+                </div>
+                <strong class="chart-value">{{ value }}</strong>
+                <span class="pressure-pill" [attr.data-level]="pressure.level">{{
+                  pressure.label
+                }}</span>
+              </div>
+            }
+          </div>
+          <p class="workload-method-note">
+            Signal uses remaining and blocked tests, active projects, and each QA’s daily target.
+            Qase does not contain case duration, so this view does not infer hours or overload.
+          </p>
+        </section>
+
+        <section class="panel spaced-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Today’s Qase execution log</h2>
+              <p>One row per test run; use this to see who is running what.</p>
+            </div>
+            <span class="source-tag">{{ state.workloadSummary().runs }} runs</span>
+          </div>
+          <div class="table-scroll">
+            <table class="execution-log-table">
+              <thead>
+                <tr>
+                  <th>QA / PIC</th>
+                  <th>PROJECT</th>
+                  <th>RUN / SCOPE</th>
+                  <th>ENVIRONMENT</th>
+                  <th>PASSED</th>
+                  <th>FAILED</th>
+                  <th>BLOCKED</th>
+                  <th>NOT RUN</th>
+                  <th>EXECUTED</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (run of state.workloadRuns(); track run.id) {
+                  <tr>
+                    <td>
+                      <strong>{{ run.owner }}</strong
+                      ><small>{{ run.date }}</small>
+                    </td>
+                    <td>
+                      <strong>{{ run.key }}</strong
+                      ><small>{{ run.projectName }}</small>
+                    </td>
+                    <td>
+                      <strong>{{ run.id }}</strong
+                      ><small>{{ run.scope }}</small>
+                    </td>
+                    <td>
+                      <span class="environment-tag">{{ run.environment }}</span>
+                    </td>
+                    <td class="success-text">{{ run.passed }}</td>
+                    <td class="red-text">{{ run.failed }}</td>
+                    <td>{{ run.blocked }}</td>
+                    <td>{{ run.total - run.passed - run.failed - run.blocked }}</td>
+                    <td>
+                      <strong>{{ run.passed + run.failed }}</strong>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
