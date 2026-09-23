@@ -1,0 +1,170 @@
+
+        <div class="heading-actions">
+          <button class="secondary" (click)="sync()" [disabled]="syncing()">
+            <svg class="button-icon" aria-hidden="true"><use href="#ui-sync"></use></svg>
+            {{ syncing() ? 'Syncing…' : 'Sync Jira + Qase' }}
+          </button>
+        </div>
+        @if (syncError()) {
+          <p class="live-alert" role="alert">{{ syncError() }}</p>
+        }
+        <section class="stats project-kpis" aria-label="Project execution overview">
+          <article>
+            <div class="stat-label">TOTAL PROJECTS</div>
+            <div class="stat-value">{{ state.filtered().length }}</div>
+            <p>Initiatives in the selected scope</p>
+          </article>
+          <article>
+            <div class="stat-label">ACTIVE PROJECTS (5D)</div>
+            <div class="stat-value">{{ state.projectCards().length }}</div>
+            <p>With recorded Qase activity</p>
+          </article>
+          <article>
+            <div class="stat-label">TEST EXECUTIONS (5D)</div>
+            <div class="stat-value">{{ state.totals().executed }}</div>
+            <p>Passed + failed instances</p>
+          </article>
+          <article>
+            <div class="stat-label">WORKDAYS MONITORED</div>
+            <div class="stat-value">{{ state.chartDates.length }}</div>
+            <p>Recent working-day trend</p>
+          </article>
+        </section>
+        <section class="project-status-bar" aria-label="Project status filters">
+          <div class="project-legend">
+            <strong>STATUS LEGEND:</strong>
+            @for (status of state.projectStatuses; track status) {
+              <span class="legend-item"><i [attr.data-status]="status"></i>{{ status }}</span>
+            }
+          </div>
+          <div class="project-filter">
+            <span>Filter:</span>
+            <button
+              [class.active]="state.projectStatus() === 'All'"
+              [attr.aria-pressed]="state.projectStatus() === 'All'"
+              (click)="state.projectStatus.set('All')"
+            >
+              All ({{ state.filtered().length }})
+            </button>
+            @for (status of state.projectStatuses; track status) {
+              <button
+                [class.active]="state.projectStatus() === status"
+                [attr.aria-pressed]="state.projectStatus() === status"
+                (click)="state.projectStatus.set(status)"
+              >
+                {{ status }} ({{ state.projectStatusCount(status) }})
+              </button>
+            }
+          </div>
+        </section>
+        <section class="project-detail-grid" aria-label="Detailed QA projects">
+          @for (p of state.projectCards(); track p.key) {
+            @let staging = state.environmentStats(p, 'STAGING');
+            @let beta = state.environmentStats(p, 'BETA');
+            <article class="project-card">
+              <header class="project-overview-header">
+                <div>
+                  <div class="project-card-meta">
+                    <span class="size-tag">SIZE {{ p.size }}</span>
+                    <span>Sprint {{ p.sprint }}</span>
+                    <span>{{ p.version }}</span>
+                  </div>
+                  <button class="project-title" (click)="state.openProject(p)">
+                    {{ p.key }} · {{ p.name }}
+                  </button>
+                </div>
+                <span class="health-pill" [attr.data-status]="state.projectHealth(p)">{{
+                  state.projectHealth(p)
+                }}</span>
+              </header>
+
+              <div class="project-overview-summary">
+                <div class="project-test-case-total">
+                  <div>
+                    <small>PROJECT SCOPE</small>
+                    <strong>{{ p.total }} <span>test cases</span></strong>
+                  </div>
+                  <p>Executed separately in Staging and Beta</p>
+                </div>
+              </div>
+
+              <div class="project-environment-overview">
+                @for (environment of ['STAGING', 'BETA']; track environment) {
+                  @let stats = environment === 'STAGING' ? staging : beta;
+                  @let progress = state.percent(stats.passed + stats.failed, p.total);
+                  <section [attr.data-status]="state.environmentHealth(p, $any(environment))">
+                    <div class="environment-overview-heading">
+                      <b>{{ environment }}</b>
+                      <small>{{ state.environmentHealth(p, $any(environment)) }}</small>
+                    </div>
+                    <div class="environment-progress-highlight">
+                      <strong>{{ progress }}%</strong>
+                      <span
+                        ><b>{{ stats.passed + stats.failed }}</b> / {{ p.total }} executed</span
+                      >
+                    </div>
+                    <div class="project-progress"><i [style.width.%]="progress"></i></div>
+                    <div class="environment-result-grid">
+                      <span
+                        ><b>{{ stats.passed }}</b
+                        ><small>Passed</small></span
+                      >
+                      <span
+                        ><b>{{ stats.failed }}</b
+                        ><small>Failed</small></span
+                      >
+                      <span
+                        ><b>{{ stats.blocked }}</b
+                        ><small>Blocked</small></span
+                      >
+                      <span
+                        ><b>{{ stats.notRun }}</b
+                        ><small>Not run</small></span
+                      >
+                    </div>
+                    <div class="environment-metrics">
+                      <span
+                        ><small>VELOCITY</small><b>{{ p.velocity ? p.velocity.toFixed(2) + '%/day' : '—' }}</b></span
+                      >
+                      <span
+                        ><small>TARGET</small
+                        ><b>{{ environment === 'STAGING' ? p.stagingEnd : p.betaEnd }}</b></span
+                      >
+                      <span
+                        ><small>ETA</small
+                        ><b>{{ (environment === 'STAGING' ? p.stagingEta : p.betaEta) || '—' }}</b></span
+                      >
+                      <span
+                        ><small>TIME LEFT</small
+                        ><b>{{
+                          state.timeRemaining(
+                            environment === 'STAGING' ? p.stagingDaysLeft : p.betaDaysLeft
+                          )
+                        }}</b></span
+                      >
+                      <span
+                        ><small>NEED</small><b>{{ p.requiredVelocity ? p.requiredVelocity.toFixed(2) + '%/day' : '—' }}</b></span
+                      >
+                      <span
+                        ><small>MTTT</small><b>{{ state.environmentMttt(p, $any(environment)) }}</b></span
+                      >
+                    </div>
+                  </section>
+                }
+              </div>
+
+              <footer class="project-overview-footer">
+                <span class="project-avatar">{{ state.initials(p.qa) }}</span>
+                <span
+                  ><small>PRIMARY QA</small><strong>{{ p.qa }}</strong></span
+                >
+                <span
+                  ><small>QASE RUNS</small><strong>{{ p.testRuns.length }}</strong></span
+                >
+                <button class="secondary" (click)="state.openProject(p)">Project detail ↗</button>
+              </footer>
+            </article>
+          } @empty {
+            <p class="empty">No projects match the selected filters.</p>
+          }
+        </section>

@@ -1,0 +1,108 @@
+        <div class="heading-actions">
+          <button class="secondary" (click)="sync()" [disabled]="syncing()">
+            <svg class="button-icon" aria-hidden="true"><use href="#ui-sync"></use></svg>
+            {{ syncing() ? 'Syncing…' : 'Sync Qase' }}
+          </button>
+        </div>
+        @if (syncError()) {
+          <p class="live-alert" role="alert">{{ syncError() }}</p>
+        }
+        <section class="stats project-kpis" aria-label="Workflow trend overview">
+          <article>
+            <div class="stat-label">PROJECTS TRACKED</div>
+            <div class="stat-value">{{ state.filtered().length }}</div>
+            <p>With a recorded execution trend</p>
+          </article>
+          <article>
+            <div class="stat-label">TESTING DAYS SHOWN</div>
+            <div class="stat-value">{{ state.chartDates.length }}</div>
+            <p>Most recent working days with Qase activity</p>
+          </article>
+          <article>
+            <div class="stat-label">AVG EXECUTION TODAY</div>
+            <div class="stat-value">{{ state.percent(state.totals().executed, state.totals().total) }}%</div>
+            <p>Across the selected scope</p>
+          </article>
+        </section>
+        <section class="project-detail-grid" aria-label="Project workflow trend">
+          @for (p of state.filtered(); track p.key) {
+            @let trend = state.projectTrend(p);
+            <article class="project-card">
+              <header class="project-overview-header">
+                <div>
+                  <div class="project-card-meta">
+                    <span>{{ p.qa }}</span>
+                    <span>STG {{ state.timeRemaining(p.stagingDaysLeft) }}</span>
+                    <span>BETA {{ state.timeRemaining(p.betaDaysLeft) }}</span>
+                  </div>
+                  <button class="project-title" (click)="state.openProject(p)">
+                    {{ p.key }} · {{ p.name }}
+                  </button>
+                </div>
+                <span class="health-pill" [attr.data-status]="state.projectHealth(p)">{{
+                  state.projectHealth(p)
+                }}</span>
+              </header>
+              @if (trend.length) {
+                @let last = trend[trend.length - 1];
+              <div
+                class="trend-sparkline"
+                role="img"
+                [attr.aria-label]="
+                  p.key +
+                  ' execution rate reached ' +
+                  last.exec +
+                  '% and pass rate ' +
+                  last.pass +
+                  '% over the last ' +
+                  trend.length +
+                  ' testing days'
+                "
+              >
+                <svg viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline class="trend-line exec" [attr.points]="state.trendPoints(trend, 'exec')" />
+                  <polyline class="trend-line pass" [attr.points]="state.trendPoints(trend, 'pass')" />
+                </svg>
+                <div class="trend-legend">
+                  <span><i class="trend-dot exec"></i>Execution {{ last.exec }}%</span>
+                  <span><i class="trend-dot pass"></i>Pass rate {{ last.pass }}%</span>
+                </div>
+              </div>
+              <table class="trend-table">
+                <caption>
+                  {{
+                    p.key
+                  }}
+                  daily execution and pass rate
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Metric</th>
+                    @for (d of trend; track d.date) {
+                      <th scope="col">{{ d.date }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">Execution</th>
+                    @for (d of trend; track d.date) {
+                      <td>{{ d.exec }}%</td>
+                    }
+                  </tr>
+                  <tr>
+                    <th scope="row">Pass rate</th>
+                    @for (d of trend; track d.date) {
+                      <td>{{ d.pass }}%</td>
+                    }
+                  </tr>
+                </tbody>
+              </table>
+              } @else {
+                <p class="empty">No recorded Qase execution for this project.</p>
+              }
+            </article>
+          } @empty {
+            <p class="empty">No projects match the selected filters.</p>
+          }
+        </section>

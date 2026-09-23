@@ -1,0 +1,225 @@
+        <div class="heading-actions">
+          <button class="secondary" (click)="sync()" [disabled]="syncing()">
+            <svg class="button-icon" aria-hidden="true"><use href="#ui-sync"></use></svg>
+            {{ syncing() ? 'Syncing…' : 'Sync Jira' }}
+          </button>
+        </div>
+        @if (syncError()) {
+          <p class="live-alert" role="alert">{{ syncError() }}</p>
+        }
+        <section class="stats detail-kpis" aria-label="Jira defect summary">
+          <article>
+            <div class="stat-label">OPEN DEFECTS</div>
+            <div class="stat-value">{{ state.bugSummary().open }}</div>
+            <p>Needs engineering action</p>
+          </article>
+          <article>
+            <div class="stat-label">CRITICAL</div>
+            <div class="stat-value">{{ state.bugSummary().critical }}</div>
+            <p class="red-text">Immediate review</p>
+          </article>
+          <article>
+            <div class="stat-label">REOPENED / BLOCKED</div>
+            <div class="stat-value">{{ state.bugSummary().reopened }}</div>
+            <p>Returned or waiting</p>
+          </article>
+          <article>
+            <div class="stat-label">PROJECTS AFFECTED</div>
+            <div class="stat-value">{{ state.bugSummary().projects }}</div>
+            <p>In the current filter</p>
+          </article>
+        </section>
+        <section class="bug-chart-grid" aria-label="Defect charts">
+          <article class="panel severity-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Severity mix</h2>
+                <p>Open defects by impact.</p>
+              </div>
+              <span class="source-tag">Jira · Sample</span>
+            </div>
+            <div class="severity-visual">
+              <div
+                class="severity-donut"
+                [style.background]="state.defectDistribution()"
+                role="img"
+                [attr.aria-label]="
+                  state.severityCount('Critical') +
+                  ' critical, ' +
+                  state.severityCount('Major') +
+                  ' major, ' +
+                  state.severityCount('Minor') +
+                  ' minor defects'
+                "
+              >
+                <div>
+                  <strong>{{ state.filteredDefects().length }}</strong
+                  ><small>defects</small>
+                </div>
+              </div>
+              <div class="severity-legend">
+                @for (severity of ['Critical', 'Major', 'Minor']; track severity) {
+                  <button
+                    [class.active]="state.bugSeverity() === severity"
+                    (click)="
+                      state.bugSeverity.set(state.bugSeverity() === severity ? 'All severities' : severity)
+                    "
+                  >
+                    <i [attr.data-severity]="severity"></i
+                    ><span
+                      >{{ severity }}<small>{{ state.severityCount(severity) }} issues</small></span
+                    ><strong
+                      >{{ state.percent(state.severityCount(severity), state.filteredDefects().length) }}%</strong
+                    >
+                  </button>
+                }
+              </div>
+            </div>
+          </article>
+          <article class="panel bug-project-chart">
+            <div class="panel-heading">
+              <div>
+                <h2>Defects by project</h2>
+                <p>Click a bar to filter the register.</p>
+              </div>
+            </div>
+            <div class="bug-bars">
+              @for (p of state.filtered(); track p.key) {
+                <button
+                  [class.active]="state.bugProject() === p.key"
+                  (click)="state.bugProject.set(state.bugProject() === p.key ? 'All projects' : p.key)"
+                >
+                  <span
+                    ><b>{{ p.key }}</b
+                    ><small>{{ p.name }}</small></span
+                  ><i><b [style.width.%]="state.percent(state.bugProjectCount(p.key), state.bugChartMax())"></b></i
+                  ><strong>{{ state.bugProjectCount(p.key) }}</strong>
+                </button>
+              }
+            </div>
+          </article>
+        </section>
+        <section class="panel spaced-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Defect register</h2>
+              <p>Linked by Jira INIT relationship and reported by QA.</p>
+            </div>
+            <span class="source-tag">Jira · Sample</span>
+          </div>
+          <div class="bug-filterbar">
+            <label class="search"
+              ><svg class="field-icon" aria-hidden="true"><use href="#ui-search"></use></svg
+              ><input
+                aria-label="Search defects"
+                placeholder="Search defect key or title..."
+                [ngModel]="state.bugQuery()"
+                (ngModelChange)="state.bugQuery.set($event)"
+            /></label>
+            <label
+              ><span class="sr-only">Project</span
+              ><select [ngModel]="state.bugProject()" (ngModelChange)="state.bugProject.set($event)">
+                <option>All projects</option>
+                @for (p of state.projects(); track p.key) {
+                  <option [value]="p.key">{{ p.key }}</option>
+                }
+              </select></label
+            >
+            <label
+              ><span class="sr-only">Reporter</span
+              ><select [ngModel]="state.bugReporter()" (ngModelChange)="state.bugReporter.set($event)">
+                <option>All reporters</option>
+                @for (reporter of state.bugReporters(); track reporter) {
+                  <option>{{ reporter }}</option>
+                }
+              </select></label
+            >
+            <label
+              ><span class="sr-only">Severity</span
+              ><select [ngModel]="state.bugSeverity()" (ngModelChange)="state.bugSeverity.set($event)">
+                <option>All severities</option>
+                <option>Critical</option>
+                <option>Major</option>
+                <option>Minor</option>
+              </select></label
+            >
+            <label
+              ><span class="sr-only">Status</span
+              ><select [ngModel]="state.bugStatus()" (ngModelChange)="state.bugStatus.set($event)">
+                <option>All statuses</option>
+                @for (status of state.bugStatuses(); track status) {
+                  <option>{{ status }}</option>
+                }
+              </select></label
+            >
+            <label
+              ><span class="sr-only">Environment</span
+              ><select
+                [ngModel]="state.bugPageEnvironment()"
+                (ngModelChange)="state.bugPageEnvironment.set($event)"
+              >
+                <option>All environments</option>
+                <option>STAGING</option>
+                <option>BETA</option>
+              </select></label
+            >
+            <button class="secondary" (click)="state.clearBugFilters()">Clear filters</button>
+          </div>
+          <div class="table-scroll">
+            <table class="defect-register-table">
+              <thead>
+                <tr>
+                  <th>DEFECT / TITLE</th>
+                  <th>PROJECT / DOMAIN</th>
+                  <th>SEVERITY</th>
+                  <th>STATUS</th>
+                  <th>REPORTED BY → OWNER</th>
+                  <th>AGE / ENVIRONMENT</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (bug of state.filteredDefects(); track bug.key) {
+                  <tr>
+                    <td>
+                      <strong>{{ bug.title }}</strong
+                      ><small class="ticket">{{ bug.key }}</small>
+                    </td>
+                    <td>
+                      {{ bug.init }}<small class="ticket">{{ bug.domain }}</small>
+                    </td>
+                    <td>
+                      <span
+                        class="badge"
+                        [class.danger]="bug.severity === 'Critical'"
+                        [class.amber]="bug.severity === 'Major'"
+                        >{{ bug.severity }}</span
+                      >
+                    </td>
+                    <td>
+                      <span
+                        class="badge"
+                        [class.danger]="bug.status === 'Reopened'"
+                        [class.amber]="bug.status === 'Open' || bug.status === 'In progress'"
+                        [class.success]="bug.status === 'Ready'"
+                        >{{ bug.status }}</span
+                      >
+                    </td>
+                    <td>
+                      <strong>{{ bug.reporter }}</strong
+                      ><small class="ticket">→ {{ bug.owner }}</small>
+                    </td>
+                    <td>
+                      <strong>{{ bug.age }}</strong
+                      ><small class="environment-tag">{{ bug.environment }}</small>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6" class="empty">No defects match the selected filters.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
