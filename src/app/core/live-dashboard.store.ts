@@ -69,7 +69,7 @@ export class LiveDashboardStore {
     if (this.submitting()) return;
     if (!this.managerKey()) { this.error.set('Enter the manager API key to queue a sync.'); return; }
     this.submitting.set(true);
-    this.api.sync(this.managerKey()).pipe(finalize(() => this.submitting.set(false))).subscribe({
+    this.api.sync(this.managerKey(), ['jira', 'qase']).pipe(finalize(() => this.submitting.set(false))).subscribe({
       next: job => {
         this.error.set('');
         this.notice.set(`Sync ${job.id} queued.`);

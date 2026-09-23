@@ -73,7 +73,7 @@ describe('QA dashboard data boundary', () => {
   it('requests backend sync with a manager key and fresh idempotency key', () => {
     const api = TestBed.inject(DashboardApiService);
     const http = TestBed.inject(HttpTestingController);
-    api.sync('test-manager-key').subscribe();
+    api.sync('test-manager-key', ['jira', 'qase']).subscribe();
     const request = http.expectOne('/api/v1/sync-jobs');
     expect(request.request.method).toBe('POST');
     expect(request.request.headers.get('X-Manager-Key')).toBe('test-manager-key');
