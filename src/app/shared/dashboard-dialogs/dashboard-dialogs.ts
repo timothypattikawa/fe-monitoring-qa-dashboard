@@ -1,10 +1,9 @@
 import { Component, ElementRef, effect, inject, viewChild } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { DashboardState } from '../../core/dashboard-state';
 
 @Component({
   selector: 'app-dashboard-dialogs',
-  imports: [FormsModule],
+  imports: [],
   templateUrl: './dashboard-dialogs.html',
 })
 export class DashboardDialogsComponent {
