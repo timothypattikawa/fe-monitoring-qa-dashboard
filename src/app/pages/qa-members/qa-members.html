@@ -43,9 +43,11 @@
     /></label>
     <div class="dialog-actions">
       @if (editingId()) {
-        <button type="button" class="secondary" (click)="cancelEdit()">Cancel</button>
+        <button type="button" class="secondary" [disabled]="saving()" (click)="cancelEdit()">Cancel</button>
       }
-      <button type="submit" class="primary">{{ editingId() ? 'Save changes' : 'Add member' }}</button>
+      <button type="submit" class="primary" [disabled]="saving()">
+        {{ saving() ? 'Saving…' : editingId() ? 'Save changes' : 'Add member' }}
+      </button>
     </div>
   </form>
 </section>
@@ -81,11 +83,11 @@
               </span>
             </td>
             <td>
-              <button type="button" class="secondary" (click)="edit(m)">Edit</button>
+              <button type="button" class="secondary" [disabled]="saving()" (click)="edit(m)">Edit</button>
               @if (m.active) {
-                <button type="button" class="secondary" (click)="deactivate(m)">Deactivate</button>
+                <button type="button" class="secondary" [disabled]="saving()" (click)="deactivate(m)">Deactivate</button>
               } @else {
-                <button type="button" class="secondary" (click)="reactivate(m)">Reactivate</button>
+                <button type="button" class="secondary" [disabled]="saving()" (click)="reactivate(m)">Reactivate</button>
               }
             </td>
           </tr>

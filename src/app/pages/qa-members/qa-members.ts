@@ -22,6 +22,7 @@ export class QaMembersPage {
   });
   readonly editingId = signal<string | null>(null);
   readonly error = signal('');
+  readonly saving = signal(false);
 
   constructor() {
     this.load();
@@ -50,21 +51,26 @@ export class QaMembersPage {
   }
 
   save() {
+    if (this.saving()) return;
     const id = this.editingId();
     const body = this.draft();
     const managerKey = this.live.managerKey();
+    this.saving.set(true);
     const request = id
       ? this.api.updateQaMember(id, body, managerKey)
       : this.api.createQaMember(body, managerKey);
     request.subscribe({
       next: () => {
+        this.saving.set(false);
         this.editingId.set(null);
         this.resetDraft();
         this.error.set('');
         this.load();
       },
-      error: (error: HttpErrorResponse) =>
-        this.error.set(error.error?.message || 'Could not save QA member.'),
+      error: (error: HttpErrorResponse) => {
+        this.saving.set(false);
+        this.error.set(error.error?.message || 'Could not save QA member.');
+      },
     });
   }
 
@@ -77,9 +83,17 @@ export class QaMembersPage {
   }
 
   private setActive(member: QaMember, active: boolean, errorMessage: string) {
+    if (this.saving()) return;
+    this.saving.set(true);
     this.api.updateQaMember(member.id, { active }, this.live.managerKey()).subscribe({
-      next: () => this.load(),
-      error: () => this.error.set(errorMessage),
+      next: () => {
+        this.saving.set(false);
+        this.load();
+      },
+      error: () => {
+        this.saving.set(false);
+        this.error.set(errorMessage);
+      },
     });
   }
 
