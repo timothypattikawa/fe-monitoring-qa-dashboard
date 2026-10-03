@@ -218,6 +218,18 @@ export type PaginatedKnowledgeDocuments = {
   page: number;
   pageSize: number;
 };
+export type KnowledgeProject = { code: string; name: string; docs: number };
+export type KnowledgeProjectCollection = {
+  name: string;
+  label: string;
+  docCount: number;
+  projectCount: number;
+  projects: KnowledgeProject[];
+};
+export type KnowledgeProjects = {
+  totals: { collections: number; docs: number; projects: number; emptyCollections: number };
+  collections: KnowledgeProjectCollection[];
+};
 export type SyncStep = {
   id: string;
   source: string;
@@ -385,6 +397,9 @@ export class DashboardApiService {
   // Knowledge endpoints return plain JSON (no ApiResponse envelope).
   knowledgeOverview(): Observable<KnowledgeOverview> {
     return this.http.get<KnowledgeOverview>(`${this.base}/knowledge/overview`);
+  }
+  knowledgeProjects(): Observable<KnowledgeProjects> {
+    return this.http.get<KnowledgeProjects>(`${this.base}/knowledge/projects`);
   }
   knowledgeCollections(): Observable<KnowledgeCollection[]> {
     return this.http.get<KnowledgeCollection[]>(`${this.base}/knowledge/collections`);

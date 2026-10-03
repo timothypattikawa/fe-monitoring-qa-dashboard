@@ -1,24 +1,15 @@
-import { DatePipe } from '@angular/common';
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import {
   DashboardApiService,
-  KnowledgeCollection,
-  KnowledgeDocument,
   KnowledgeOverview,
-  KnowledgeStatus,
+  KnowledgeProjectCollection,
+  KnowledgeProjects,
 } from '../../core/dashboard-api.service';
 import { LiveDashboardStore } from '../../core/live-dashboard.store';
 
-export const STATUS_VIEW: Record<
-  KnowledgeStatus,
-  { label: string; tone: 'ok' | 'warn' | 'bad'; action: 'sync' | 'reindex'; actionLabel: string }
-> = {
-  HEALTHY: { label: 'HEALTHY', tone: 'ok', action: 'sync', actionLabel: 'Sync' },
-  OUTDATED_SYNC: { label: 'OUTDATED SYNC', tone: 'warn', action: 'reindex', actionLabel: 'Reindex' },
-  NEEDS_REINDEX: { label: 'NEEDS REINDEX', tone: 'bad', action: 'reindex', actionLabel: 'Run Force' },
-};
+export const KN_PALETTE = ['#4fc3f7', '#ff6b6b', '#ffd93d', '#6bcf7f', '#a78bfa', '#f472b6', '#fb923c', '#38bdf8', '#34d399', '#c084fc', '#22d3ee', '#f87171'];
 
 /** "8 mins ago" style label; '-' when missing/invalid. */
 export function relativeTime(iso: string | null | undefined, now = Date.now()): string {
@@ -36,29 +27,58 @@ export function relativeTime(iso: string | null | undefined, now = Date.now()): 
   return '';
 }
 
+/** Round max up to 1/2/5 x 10^k so gridlines land on clean numbers. */
+export function niceMax(max: number): number {
+  if (max <= 0) return 1;
+  const p = 10 ** Math.floor(Math.log10(max));
+  return ([1, 2, 5, 10].find((m) => m * p >= max) as number) * p;
+}
+
 @Component({
   selector: 'app-knowledge',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule],
   templateUrl: './knowledge.html',
 })
 export class KnowledgePage implements OnInit, OnDestroy {
   private readonly api = inject(DashboardApiService);
   private readonly live = inject(LiveDashboardStore);
-  readonly view = STATUS_VIEW;
   readonly relative = relativeTime;
+  readonly palette = KN_PALETTE;
   readonly overview = signal<KnowledgeOverview | null>(null);
-  readonly collections = signal<KnowledgeCollection[]>([]);
-  readonly docs = signal({ items: [] as KnowledgeDocument[], total: 0, page: 1, pageSize: 10 });
+  readonly data = signal<KnowledgeProjects | null>(null);
   readonly loading = signal(false);
-  readonly docsLoading = signal(false);
   readonly error = signal('');
-  readonly docsError = signal('');
+  readonly projectsError = signal('');
   readonly notice = signal('');
   readonly busy = signal<Record<string, boolean>>({});
+  readonly query = signal('');
+  readonly toggled = signal<Record<string, boolean>>({});
   search = '';
-  collection = '';
-  page = 1;
   private timer?: ReturnType<typeof setTimeout>;
+
+  readonly collections = computed(() => this.data()?.collections ?? []);
+  readonly chart = computed(() => {
+    const cols = this.collections();
+    const max = niceMax(Math.max(0, ...cols.map((c) => c.docCount)));
+    const ticks = [1, 0.75, 0.5, 0.25, 0].map((f) => Math.round(max * f));
+    return {
+      max,
+      ticks,
+      alt: cols.map((c) => `${c.label}: ${c.docCount.toLocaleString('en-US')} docs`).join('; '),
+    };
+  });
+  /** Collections (with original index/color) whose projects match the query; all when no query. */
+  readonly sections = computed(() => {
+    const q = this.query().trim().toLowerCase();
+    return this.collections()
+      .map((c, i) => ({
+        c,
+        i,
+        color: KN_PALETTE[i % KN_PALETTE.length],
+        rows: q ? c.projects.filter((p) => `${p.code} ${p.name}`.toLowerCase().includes(q)) : c.projects,
+      }))
+      .filter((s) => !q || s.rows.length);
+  });
 
   ngOnInit() { this.load(); }
   ngOnDestroy() { clearTimeout(this.timer); }
@@ -66,39 +86,30 @@ export class KnowledgePage implements OnInit, OnDestroy {
   load() {
     this.loading.set(true);
     this.error.set('');
+    this.projectsError.set('');
     this.api.knowledgeOverview().subscribe({
       next: (o) => this.overview.set(o),
       error: () => this.error.set('Unable to load knowledge overview. Solr may be unreachable.'),
     });
-    this.api.knowledgeCollections().pipe(finalize(() => this.loading.set(false))).subscribe({
-      next: (c) => this.collections.set(c),
-      error: () => this.error.set('Unable to load collections. Solr may be unreachable.'),
+    this.api.knowledgeProjects().pipe(finalize(() => this.loading.set(false))).subscribe({
+      next: (d) => this.data.set(d),
+      error: () => this.projectsError.set('Unable to load Solr projects. Solr may be unreachable.'),
     });
-    this.loadDocs();
-  }
-
-  loadDocs() {
-    this.docsLoading.set(true);
-    this.docsError.set('');
-    this.api
-      .knowledgeDocuments({ collection: this.collection, q: this.search.trim(), page: this.page, pageSize: 10 })
-      .pipe(finalize(() => this.docsLoading.set(false)))
-      .subscribe({
-        next: (r) => this.docs.set(r),
-        error: () => this.docsError.set('Unable to load documents. Solr may be unreachable.'),
-      });
   }
 
   onSearch() {
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.filter(), 300);
+    this.timer = setTimeout(() => this.query.set(this.search), 250);
   }
-  filter() { this.page = 1; this.loadDocs(); }
-  reset() { this.search = ''; this.collection = ''; this.filter(); }
-  go(delta: number) { this.page += delta; this.loadDocs(); }
-  lastPage() { const d = this.docs(); return Math.max(1, Math.ceil(d.total / d.pageSize)); }
 
-  run(c: KnowledgeCollection) { this.act(c.name, STATUS_VIEW[c.status].action); }
+  isOpen(i: number, name: string) {
+    return this.query().trim() ? true : (this.toggled()[name] ?? i === 0);
+  }
+  toggle(i: number, name: string) {
+    this.toggled.update((t) => ({ ...t, [name]: !this.isOpen(i, name) }));
+  }
+
+  run(c: KnowledgeProjectCollection) { this.act(c.name, 'sync'); }
   syncAll() { for (const c of this.collections()) this.act(c.name, 'sync'); }
 
   private act(name: string, action: 'sync' | 'reindex') {

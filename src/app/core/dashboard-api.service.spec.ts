@@ -80,6 +80,14 @@ describe('DashboardApiService', () => {
     });
   });
 
+  it('fetches knowledge projects as plain JSON', () => {
+    let out: unknown;
+    TestBed.inject(DashboardApiService).knowledgeProjects().subscribe((r) => (out = r));
+    const body = { totals: { collections: 0, docs: 0, projects: 0, emptyCollections: 0 }, collections: [] };
+    TestBed.inject(HttpTestingController).expectOne('/api/v1/knowledge/projects').flush(body);
+    expect(out).toEqual(body);
+  });
+
   it('calls knowledge endpoints with params and manager key', () => {
     TestBed.inject(DashboardApiService)
       .knowledgeDocuments({ collection: 'jira_tickets', q: 'refund', page: 2, pageSize: 10 })

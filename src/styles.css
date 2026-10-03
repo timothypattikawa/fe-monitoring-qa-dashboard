@@ -3497,32 +3497,39 @@
   .kn-chip { align-items: center; background: #f4f6fb; border: 1px solid var(--border); border-radius: 999px; display: inline-flex; font-size: 12px; font-weight: 600; gap: 8px; padding: 6px 14px; }
   .kn-bar { background: #e1e6ef; border-radius: 999px; display: inline-block; height: 6px; overflow: hidden; width: 80px; }
   .kn-bar i { background: var(--accent); display: block; height: 100%; }
-  .kn-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); padding: 0 20px 16px; }
-  .kn-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; gap: 10px; padding: 14px; }
-  .kn-card header, .kn-card footer { align-items: center; display: flex; gap: 8px; justify-content: space-between; }
-  .kn-card .kn-bar { display: block; width: 100%; }
-  .kn-dot { background: var(--accent); border-radius: 50%; display: inline-block; height: 8px; margin-right: 6px; width: 8px; }
-  .kn-card[data-tone='ok'] .kn-status { background: #dff3ea; color: #087a5b; }
-  .kn-card[data-tone='warn'] .kn-status { background: #fdf0d5; color: #a86400; }
-  .kn-card[data-tone='warn'] .kn-dot, .kn-card[data-tone='warn'] .kn-bar i { background: var(--warning); }
-  .kn-card[data-tone='bad'] .kn-status { background: #fde4e4; color: #c9222d; }
-  .kn-card[data-tone='bad'] .kn-dot, .kn-card[data-tone='bad'] .kn-bar i { background: var(--danger); }
-  .kn-tag { background: #eef1f6; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 11px; padding: 2px 6px; }
-  .kn-sync[data-sync='SYNCED'] { background: #dff3ea; color: #087a5b; }
-  .kn-sync[data-sync='QUEUED'], .kn-sync[data-sync='SYNCING'] { background: #e3edfb; color: #2563a8; }
-  .kn-sync[data-sync='FAILED'] { background: #fde4e4; color: #c9222d; }
   .kn-alert, .kn-notice { align-items: center; border-radius: 8px; display: flex; font-size: 12px; font-weight: 600; gap: 12px; margin: 0 22px 14px; padding: 10px 14px; }
   .kn-alert { background: #fde4e4; color: #c9222d; }
   .kn-notice { background: #e3edfb; color: #2563a8; }
   .kn-alert button { margin-left: auto; padding: 4px 12px; }
-  .kn-section { align-items: baseline; display: flex; gap: 12px; justify-content: space-between; padding: 6px 22px 12px; }
-  .kn-section h3 { font-size: 14px; font-weight: 700; margin: 0; }
-  .kn-section small { color: var(--muted); font-size: 11px; }
-  .kn-grid .kn-empty { grid-column: 1 / -1; padding: 28px 0; text-align: center; }
-  .kn-card p { font-size: 12px; margin: 0; }
-  .kn-card footer small { color: var(--muted); font-size: 11px; }
-  .kn-filters { align-items: end; border-top: 1px solid var(--border); display: grid; gap: 14px 16px; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; padding: 16px 22px; }
-  .kn-filters label { color: #626d83; display: flex; flex-direction: column; font-size: 11px; font-weight: 600; gap: 6px; min-width: 0; }
-  .kn-filters input, .kn-filters select { box-sizing: border-box; font-size: 13px; padding: 9px 12px; width: 100%; }
-  .kn-reset { padding: 9px 18px; }
-  @media (max-width: 700px) { .kn-filters { grid-template-columns: minmax(0, 1fr); } }
+  .kn-cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); padding: 0 22px 16px; }
+  .kn-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+  .kn-stat b { display: block; font-size: 28px; line-height: 1.2; }
+  .kn-stat span { color: var(--muted); font-size: 12px; }
+  .kn-stat[data-tone='blue'] b { color: var(--blue); }
+  .kn-stat[data-tone='purple'] b { color: #7c3aed; }
+  .kn-stat[data-tone='green'] b { color: var(--accent); }
+  .kn-stat[data-tone='red'] b { color: var(--danger); }
+  .kn-block { border-top: 1px solid var(--border); padding: 16px 22px; }
+  .kn-block h3 { font-size: 14px; font-weight: 700; margin: 0 0 12px; }
+  .kn-chart { display: flex; padding-top: 8px; overflow-x: auto; }
+  .kn-axis { display: flex; flex-direction: column; flex: none; height: 240px; justify-content: space-between; padding-right: 8px; text-align: right; width: 44px; color: var(--muted); font-size: 10px; transform: translateY(-6px); }
+  .kn-plot { flex: 1; min-width: 0; }
+  .kn-cols { border-bottom: 1px solid var(--border); display: flex; height: 240px; position: relative; }
+  .kn-grid-line { border-top: 1px dashed var(--border); left: 0; position: absolute; right: 0; }
+  .kn-col { align-items: center; display: flex; flex: 1 0 56px; flex-direction: column; height: 100%; justify-content: flex-end; position: relative; z-index: 1; }
+  .kn-col i { border-radius: 4px 4px 0 0; display: block; width: 60%; max-width: 48px; }
+  .kn-val { font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+  .kn-labels { display: flex; }
+  .kn-labels span { color: var(--muted); flex: 1 0 56px; font-size: 11px; overflow: hidden; padding: 6px 3px 0; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+  .kn-search { box-sizing: border-box; font-size: 13px; margin-bottom: 12px; padding: 9px 12px; width: 100%; }
+  .kn-sec { border: 1px solid var(--border); border-left: 4px solid var(--kn-c, var(--accent)); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+  .kn-head { align-items: center; display: flex; gap: 10px; padding: 8px 12px; }
+  .kn-toggle { align-items: center; flex-wrap: wrap; background: none; border: 0; cursor: pointer; display: flex; flex: 1; font: inherit; gap: 12px; min-width: 0; padding: 4px 0; text-align: left; }
+  .kn-toggle strong { font-size: 14px; }
+  .kn-toggle small { color: var(--muted); font-size: 12px; margin-left: auto; }
+  .kn-chev { border-bottom: 2px solid var(--muted); border-right: 2px solid var(--muted); display: inline-block; height: 7px; transform: rotate(45deg); transition: transform 0.2s; width: 7px; }
+  .kn-toggle[aria-expanded='false'] .kn-chev { transform: rotate(-45deg); }
+  .kn-head .secondary { padding: 4px 12px; }
+  .kn-sec .table-scroll { border-top: 1px solid var(--border); }
+  .kn-sec td.num, .kn-sec th.num { text-align: right; }
+  .kn-empty { padding: 20px 0; text-align: center; }
