@@ -1,12 +1,3 @@
-        <div class="heading-actions">
-          <button class="secondary" (click)="sync()" [disabled]="syncing()">
-            <svg class="button-icon" aria-hidden="true"><use href="#ui-sync"></use></svg>
-            {{ syncing() ? 'Syncing…' : 'Sync Qase' }}
-          </button>
-        </div>
-        @if (syncError()) {
-          <p class="live-alert" role="alert">{{ syncError() }}</p>
-        }
         <section class="stats project-kpis" aria-label="Workflow trend overview">
           <article>
             <div class="stat-label">PROJECTS TRACKED</div>

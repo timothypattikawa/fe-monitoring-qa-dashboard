@@ -24,8 +24,8 @@ describe('QaMembersPage', () => {
         {
           id: 'm1',
           name: 'Nadia Putri',
-          jiraAccountId: '',
-          qaseMemberId: '',
+          jiraEmail: '',
+          qaseDisplayName: '',
           weeklyCapacityHours: 40,
           active: true,
         },
@@ -43,8 +43,8 @@ describe('QaMembersPage', () => {
 
     fixture.componentInstance.draft.set({
       name: 'Nadia Putri',
-      jiraAccountId: '',
-      qaseMemberId: '',
+      jiraEmail: '',
+      qaseDisplayName: '',
       weeklyCapacityHours: 40,
     });
     fixture.componentInstance.save();
@@ -52,8 +52,8 @@ describe('QaMembersPage', () => {
     createReq.flush({
       id: 'm1',
       name: 'Nadia Putri',
-      jiraAccountId: '',
-      qaseMemberId: '',
+      jiraEmail: '',
+      qaseDisplayName: '',
       weeklyCapacityHours: 40,
       active: true,
     });
@@ -66,8 +66,8 @@ describe('QaMembersPage', () => {
           {
             id: 'm1',
             name: 'Nadia Putri',
-            jiraAccountId: '',
-            qaseMemberId: '',
+            jiraEmail: '',
+            qaseDisplayName: '',
             weeklyCapacityHours: 40,
             active: true,
           },
@@ -76,26 +76,63 @@ describe('QaMembersPage', () => {
     expect(fixture.componentInstance.members().length).toBe(1);
   });
 
+  it('sets warnings from the save response', () => {
+    const fixture = TestBed.createComponent(QaMembersPage);
+    fixture.detectChanges();
+    http
+      .expectOne((r) => r.url === '/api/v1/qa-members')
+      .flush({ asOf: null, sources: {}, data: [] });
+
+    fixture.componentInstance.draft.set({
+      name: 'Nadia Putri',
+      jiraEmail: 'nadia@example.com',
+      qaseDisplayName: 'Nadia',
+      weeklyCapacityHours: 40,
+    });
+    fixture.componentInstance.save();
+    const createReq = http.expectOne((r) => r.url === '/api/v1/qa-members' && r.method === 'POST');
+    createReq.flush({
+      id: 'm1',
+      name: 'Nadia Putri',
+      jiraEmail: 'nadia@example.com',
+      qaseDisplayName: 'Nadia',
+      weeklyCapacityHours: 40,
+      active: true,
+      warnings: {
+        qaseDisplayName: "Nama 'Nadia' tidak ditemukan di opsi QA PIC/QA Tester di Qase saat ini.",
+      },
+    });
+    http
+      .expectOne((r) => r.url === '/api/v1/qa-members')
+      .flush({ asOf: null, sources: {}, data: [] });
+
+    expect(fixture.componentInstance.warnings()).toEqual({
+      qaseDisplayName: "Nama 'Nadia' tidak ditemukan di opsi QA PIC/QA Tester di Qase saat ini.",
+    });
+  });
+
   it('loads an existing member into the draft for editing', () => {
     const fixture = TestBed.createComponent(QaMembersPage);
     fixture.detectChanges();
     const member = {
       id: 'm1',
       name: 'Nadia Putri',
-      jiraAccountId: 'acc-1',
-      qaseMemberId: 'qm-1',
+      jiraEmail: 'nadia@example.com',
+      qaseDisplayName: 'Nadia',
       weeklyCapacityHours: 40,
       active: true,
     };
-    http.expectOne((r) => r.url === '/api/v1/qa-members').flush({ asOf: null, sources: {}, data: [member] });
+    http
+      .expectOne((r) => r.url === '/api/v1/qa-members')
+      .flush({ asOf: null, sources: {}, data: [member] });
 
     fixture.componentInstance.edit(member);
 
     expect(fixture.componentInstance.editingId()).toBe('m1');
     expect(fixture.componentInstance.draft()).toEqual({
       name: 'Nadia Putri',
-      jiraAccountId: 'acc-1',
-      qaseMemberId: 'qm-1',
+      jiraEmail: 'nadia@example.com',
+      qaseDisplayName: 'Nadia',
       weeklyCapacityHours: 40,
     });
   });
@@ -106,15 +143,19 @@ describe('QaMembersPage', () => {
     const active = {
       id: 'm1',
       name: 'Nadia Putri',
-      jiraAccountId: '',
-      qaseMemberId: '',
+      jiraEmail: '',
+      qaseDisplayName: '',
       weeklyCapacityHours: 40,
       active: true,
     };
-    http.expectOne((r) => r.url === '/api/v1/qa-members').flush({ asOf: null, sources: {}, data: [active] });
+    http
+      .expectOne((r) => r.url === '/api/v1/qa-members')
+      .flush({ asOf: null, sources: {}, data: [active] });
 
     fixture.componentInstance.deactivate(active);
-    const patchReq = http.expectOne((r) => r.url === '/api/v1/qa-members/m1' && r.method === 'PATCH');
+    const patchReq = http.expectOne(
+      (r) => r.url === '/api/v1/qa-members/m1' && r.method === 'PATCH',
+    );
     expect(patchReq.request.body).toEqual({ active: false });
     patchReq.flush({ ...active, active: false });
     http
@@ -130,15 +171,19 @@ describe('QaMembersPage', () => {
     const inactive = {
       id: 'm1',
       name: 'Nadia Putri',
-      jiraAccountId: '',
-      qaseMemberId: '',
+      jiraEmail: '',
+      qaseDisplayName: '',
       weeklyCapacityHours: 40,
       active: false,
     };
-    http.expectOne((r) => r.url === '/api/v1/qa-members').flush({ asOf: null, sources: {}, data: [inactive] });
+    http
+      .expectOne((r) => r.url === '/api/v1/qa-members')
+      .flush({ asOf: null, sources: {}, data: [inactive] });
 
     fixture.componentInstance.reactivate(inactive);
-    const patchReq = http.expectOne((r) => r.url === '/api/v1/qa-members/m1' && r.method === 'PATCH');
+    const patchReq = http.expectOne(
+      (r) => r.url === '/api/v1/qa-members/m1' && r.method === 'PATCH',
+    );
     expect(patchReq.request.body).toEqual({ active: true });
     patchReq.flush({ ...inactive, active: true });
     http

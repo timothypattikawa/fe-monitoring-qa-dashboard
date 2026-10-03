@@ -110,7 +110,7 @@
             [disabled]="live.submitting()">
             <svg class="button-icon" aria-hidden="true">
               <use href="#ui-sync"></use>
-            </svg> {{ live.submitting() ? 'Queueing…' : 'Sync data' }}
+            </svg> {{ live.submitting() ? 'Syncing…' : 'Sync data' }}
           </button>
           @if (page() === 'Projects') {
           <button class="primary" (click)="openProjectForm()">
@@ -122,8 +122,16 @@
           }
         </div>
       </div>
-      <label class="manager-key">Manager API key <input type="password" autocomplete="off" [ngModel]="live.managerKey()"
-          (ngModelChange)="live.managerKey.set($event)" placeholder="Required for sync and project mapping" /></label>
+      @if (live.submitting()) {
+      <div class="sync-progress" role="status" aria-label="Sync progress">
+        <div class="sync-progress-track">
+          <div class="sync-progress-bar"
+            [class.indeterminate]="live.syncProgressPercent() === null"
+            [style.width.%]="live.syncProgressPercent() ?? 100"></div>
+        </div>
+        <span class="sync-progress-label">{{ live.syncStatusLabel() }}</span>
+      </div>
+      }
       <div class="filterbar">
         <label class="search"><svg class="field-icon" aria-hidden="true">
             <use href="#ui-search"></use>

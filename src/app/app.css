@@ -57,6 +57,42 @@ main {
   display: flex;
   gap: 8px;
 }
+.sync-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 -4px;
+}
+.sync-progress-track {
+  flex: 1;
+  max-width: 260px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.sync-progress-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.sync-progress-bar.indeterminate {
+  width: 40% !important;
+  animation: sync-progress-slide 1.1s ease-in-out infinite;
+}
+@keyframes sync-progress-slide {
+  0% {
+    margin-left: -40%;
+  }
+  100% {
+    margin-left: 100%;
+  }
+}
+.sync-progress-label {
+  font-size: 11px;
+  color: var(--muted);
+}
 .filterbar {
   display: flex;
   align-items: center;
@@ -93,6 +129,12 @@ main {
 }
 .spaced-panel {
   margin-top: 22px;
+}
+.panel > form {
+  padding: 0 22px 22px;
+}
+.panel > form > .form-grid {
+  margin-top: 0;
 }
 .detail-kpis {
   margin-bottom: 22px;
@@ -294,6 +336,9 @@ main {
   }
   .panel-heading {
     padding: 17px;
+  }
+  .panel > form {
+    padding: 0 17px 17px;
   }
   .panel-footer {
     flex-wrap: wrap;

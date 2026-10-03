@@ -25,7 +25,8 @@
               }
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "src/app/app.css"
             ]
           },
           "configurations": {
@@ -54,6 +55,10 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "allowedHosts": true,
+            "proxyConfig": "proxy.conf.json"
+          },
           "configurations": {
             "production": {
               "buildTarget": "monitoring-qa-alfagift:build:production"

@@ -1,0 +1,80 @@
+<section class="panel" aria-labelledby="knowledge-title">
+  <div class="panel-heading">
+    <div><h2 id="knowledge-title">Knowledge &amp; RAG</h2><p>Solr vector index health and sync status.</p></div>
+    <button class="primary kn-dark" type="button" (click)="syncAll()" [disabled]="!collections().length">Sync All Collections</button>
+  </div>
+  @if (error()) {
+    <p class="kn-alert" role="alert">{{ error() }} <button type="button" class="secondary" (click)="load()">Retry</button></p>
+  }
+  @if (notice()) { <p class="kn-notice" role="status">{{ notice() }}</p> }
+  @if (overview(); as o) {
+    <div class="kn-chips">
+      <span class="kn-chip">Vector Dimension: {{ o.embedding.dimension.toLocaleString('en-US') }}d ({{ o.embedding.model }})</span>
+      <span class="kn-chip">RAM / Heap: {{ o.ram.usedGb }} / {{ o.ram.totalGb }} GB
+        <span class="kn-bar" role="progressbar" aria-label="RAM usage" [attr.aria-valuenow]="o.ram.pct" aria-valuemin="0" aria-valuemax="100"><i [style.width.%]="o.ram.pct"></i></span>
+        <span class="doc-pill">{{ o.ram.pct }}%</span></span>
+      <span class="kn-chip">Last Full Index Sync: {{ relative(o.lastFullSync) }}</span>
+    </div>
+  }
+  <div class="kn-section">
+    <h3>Vector Collections Status ({{ overview()?.collectionsActive ?? collections().length }} Active Indexes)</h3>
+    <small>Auto-sync scheduler: {{ overview()?.autoSyncEvery ?? '-' }}</small>
+  </div>
+  <div class="kn-grid">
+    @for (c of collections(); track c.name) {
+      @let v = view[c.status];
+      <article class="kn-card" [attr.data-tone]="v.tone" [attr.aria-label]="c.name">
+        <header><strong><span class="kn-dot"></span>{{ c.name }}</strong><span class="doc-pill kn-status">{{ v.label }}</span></header>
+        <p>Coverage: {{ c.docCount.toLocaleString('en-US') }}{{ c.target !== null ? ' / ' + c.target.toLocaleString('en-US') : '' }} docs
+          <b>{{ c.coveragePct !== null ? c.coveragePct + '%' : '-' }}</b></p>
+        @if (c.coveragePct !== null) {
+          <span class="kn-bar" role="progressbar" [attr.aria-label]="c.name + ' coverage'" [attr.aria-valuenow]="c.coveragePct" aria-valuemin="0" aria-valuemax="100"><i [style.width.%]="c.coveragePct"></i></span>
+        }
+        <footer>
+          <small>{{ c.lastSyncedAt ? (c.lastSyncedAt | date: 'dd MMM yyyy, HH:mm') : '-' }} · {{ relative(c.lastSyncedAt) }}</small>
+          <button type="button" class="secondary" [disabled]="busy()[c.name]" (click)="run(c)">{{ busy()[c.name] ? 'Working…' : v.actionLabel }}</button>
+        </footer>
+      </article>
+    } @empty { <p class="empty kn-empty">{{ loading() ? 'Loading collections…' : 'No collections found.' }}</p> }
+  </div>
+
+  <div class="kn-filters">
+    <label>Search documents<input type="search" aria-label="Search documents" placeholder="Title or key" [(ngModel)]="search" (ngModelChange)="onSearch()" /></label>
+    <label>Collection
+      <select aria-label="Filter by collection" [(ngModel)]="collection" (ngModelChange)="filter()">
+        <option value="">All Collections ({{ collections().length }})</option>
+        @for (c of collections(); track c.name) { <option [value]="c.name">{{ c.name }}</option> }
+      </select>
+    </label>
+    <button type="button" class="secondary kn-reset" (click)="reset()">Reset</button>
+  </div>
+  @if (docsError()) {
+    <p class="kn-alert" role="alert">{{ docsError() }} <button type="button" class="secondary" (click)="loadDocs()">Retry</button></p>
+  }
+  <div class="table-scroll">
+    <table class="doc-matrix">
+      <thead><tr><th>Document Title / Knowledge Item</th><th>Target Collection</th><th>Chunks / Embeddings</th><th>Last Synced</th><th>Sync Status</th></tr></thead>
+      <tbody>
+        @for (d of docs().items; track d.id) {
+          <tr>
+            <td><strong>{{ d.title }}</strong>
+              <small>{{ d.key }}
+                @if (d.sourceUrl) { <a [href]="d.sourceUrl" target="_blank" rel="noopener" [attr.aria-label]="'Open source of ' + d.title">↗</a> }
+              </small></td>
+            <td><code class="kn-tag">{{ d.collection }}</code></td>
+            <td>{{ d.chunks }} Chunks<small>{{ d.dims.toLocaleString('en-US') }} dims</small></td>
+            <td>{{ relative(d.lastSyncedAt) }}<small>{{ d.lastSyncedAt ? (d.lastSyncedAt | date: 'dd MMM yyyy, HH:mm') : '' }}</small></td>
+            <td><span class="doc-pill kn-sync" [attr.data-sync]="d.syncStatus">{{ d.syncStatus }}</span></td>
+          </tr>
+        } @empty { <tr><td colspan="5" class="empty">{{ docsLoading() ? 'Loading documents…' : 'No documents found.' }}</td></tr> }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-pagination">
+    <span>{{ docs().total }} documents · Page {{ docs().page }} of {{ lastPage() }}</span>
+    <span>
+      <button type="button" class="secondary" [disabled]="page <= 1 || docsLoading()" (click)="go(-1)">Previous</button>
+      <button type="button" class="secondary" [disabled]="page >= lastPage() || docsLoading()" (click)="go(1)">Next</button>
+    </span>
+  </div>
+</section>

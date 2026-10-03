@@ -1,170 +1,246 @@
-
-        <div class="heading-actions">
-          <button class="secondary" (click)="sync()" [disabled]="syncing()">
-            <svg class="button-icon" aria-hidden="true"><use href="#ui-sync"></use></svg>
-            {{ syncing() ? 'Syncing…' : 'Sync Jira + Qase' }}
+<section class="stats project-kpis" aria-label="Project execution overview">
+  <article>
+    <div class="stat-label">TOTAL PROJECTS</div>
+    <div class="stat-value">{{ state.filtered().length }}</div>
+    <p>Initiatives in the selected scope</p>
+  </article>
+  <article>
+    <div class="stat-label">ACTIVE PROJECTS (5D)</div>
+    <div class="stat-value">{{ state.projectCards().length }}</div>
+    <p>With recorded Qase activity</p>
+  </article>
+  <article>
+    <div class="stat-label">TEST EXECUTIONS (5D)</div>
+    <div class="stat-value">{{ state.totals().executed }}</div>
+    <p>Passed + failed instances</p>
+  </article>
+  <article>
+    <div class="stat-label">WORKDAYS MONITORED</div>
+    <div class="stat-value">{{ state.chartDates.length }}</div>
+    <p>Recent working-day trend</p>
+  </article>
+</section>
+<section class="project-status-bar" aria-label="Project status filters">
+  <div class="project-legend">
+    <strong>STATUS LEGEND:</strong>
+    @for (status of state.projectStatuses; track status) {
+      <span class="legend-item"><i [attr.data-status]="status"></i>{{ status }}</span>
+    }
+  </div>
+  <div class="project-filter">
+    <span>Filter:</span>
+    <button
+      [class.active]="state.projectStatus() === 'All'"
+      [attr.aria-pressed]="state.projectStatus() === 'All'"
+      (click)="state.projectStatus.set('All')"
+    >
+      All ({{ state.filtered().length }})
+    </button>
+    @for (status of state.projectStatuses; track status) {
+      <button
+        [class.active]="state.projectStatus() === status"
+        [attr.aria-pressed]="state.projectStatus() === status"
+        (click)="state.projectStatus.set(status)"
+      >
+        {{ status }} ({{ state.projectStatusCount(status) }})
+      </button>
+    }
+  </div>
+</section>
+<section class="project-detail-grid" aria-label="Detailed QA projects">
+  @for (p of pagedCards(); track p.key) {
+    @let staging = state.environmentStats(p, 'STAGING');
+    @let beta = state.environmentStats(p, 'BETA');
+    <article class="project-card">
+      <header class="project-overview-header">
+        <div>
+          <div class="project-card-meta">
+            <span>{{ p.version }} · Size {{ p.size }}</span>
+          </div>
+          <button class="project-title" (click)="openProject(p)">
+            {{ p.key }} · {{ p.name }}
           </button>
         </div>
-        @if (syncError()) {
-          <p class="live-alert" role="alert">{{ syncError() }}</p>
-        }
-        <section class="stats project-kpis" aria-label="Project execution overview">
-          <article>
-            <div class="stat-label">TOTAL PROJECTS</div>
-            <div class="stat-value">{{ state.filtered().length }}</div>
-            <p>Initiatives in the selected scope</p>
-          </article>
-          <article>
-            <div class="stat-label">ACTIVE PROJECTS (5D)</div>
-            <div class="stat-value">{{ state.projectCards().length }}</div>
-            <p>With recorded Qase activity</p>
-          </article>
-          <article>
-            <div class="stat-label">TEST EXECUTIONS (5D)</div>
-            <div class="stat-value">{{ state.totals().executed }}</div>
-            <p>Passed + failed instances</p>
-          </article>
-          <article>
-            <div class="stat-label">WORKDAYS MONITORED</div>
-            <div class="stat-value">{{ state.chartDates.length }}</div>
-            <p>Recent working-day trend</p>
-          </article>
-        </section>
-        <section class="project-status-bar" aria-label="Project status filters">
-          <div class="project-legend">
-            <strong>STATUS LEGEND:</strong>
-            @for (status of state.projectStatuses; track status) {
-              <span class="legend-item"><i [attr.data-status]="status"></i>{{ status }}</span>
-            }
+        <span class="health-pill" [attr.data-status]="state.projectHealth(p)">{{
+          state.projectHealth(p)
+        }}</span>
+      </header>
+
+      <div class="project-overview-summary">
+        <div class="project-test-case-total">
+          <div>
+            <small>PROJECT SCOPE</small>
+            <strong>{{ p.total }} <span>test cases</span></strong>
           </div>
-          <div class="project-filter">
-            <span>Filter:</span>
-            <button
-              [class.active]="state.projectStatus() === 'All'"
-              [attr.aria-pressed]="state.projectStatus() === 'All'"
-              (click)="state.projectStatus.set('All')"
-            >
-              All ({{ state.filtered().length }})
-            </button>
-            @for (status of state.projectStatuses; track status) {
-              <button
-                [class.active]="state.projectStatus() === status"
-                [attr.aria-pressed]="state.projectStatus() === status"
-                (click)="state.projectStatus.set(status)"
+          <p>Executed separately in Staging and Beta</p>
+        </div>
+      </div>
+
+      <div class="project-environment-overview">
+        @for (environment of ['STAGING', 'BETA']; track environment) {
+          @let stats = environment === 'STAGING' ? staging : beta;
+          @let progress = state.executionPercent(stats.passed, stats.failed, stats.total);
+          <section [attr.data-status]="state.environmentHealth(p, $any(environment))">
+            <div class="environment-overview-heading">
+              <b>{{ environment }}</b>
+              <small>{{ state.environmentHealth(p, $any(environment)) }}</small>
+            </div>
+            <div class="environment-progress-highlight">
+              <strong>{{ progress }}%</strong>
+              <span
+                ><b>{{ stats.passed + stats.failed }}</b> / {{ stats.total }} executed</span
               >
-                {{ status }} ({{ state.projectStatusCount(status) }})
-              </button>
-            }
-          </div>
-        </section>
-        <section class="project-detail-grid" aria-label="Detailed QA projects">
-          @for (p of state.projectCards(); track p.key) {
-            @let staging = state.environmentStats(p, 'STAGING');
-            @let beta = state.environmentStats(p, 'BETA');
-            <article class="project-card">
-              <header class="project-overview-header">
-                <div>
-                  <div class="project-card-meta">
-                    <span class="size-tag">SIZE {{ p.size }}</span>
-                    <span>Sprint {{ p.sprint }}</span>
-                    <span>{{ p.version }}</span>
-                  </div>
-                  <button class="project-title" (click)="state.openProject(p)">
-                    {{ p.key }} · {{ p.name }}
-                  </button>
-                </div>
-                <span class="health-pill" [attr.data-status]="state.projectHealth(p)">{{
-                  state.projectHealth(p)
-                }}</span>
-              </header>
-
-              <div class="project-overview-summary">
-                <div class="project-test-case-total">
-                  <div>
-                    <small>PROJECT SCOPE</small>
-                    <strong>{{ p.total }} <span>test cases</span></strong>
-                  </div>
-                  <p>Executed separately in Staging and Beta</p>
-                </div>
-              </div>
-
-              <div class="project-environment-overview">
-                @for (environment of ['STAGING', 'BETA']; track environment) {
-                  @let stats = environment === 'STAGING' ? staging : beta;
-                  @let progress = state.percent(stats.passed + stats.failed, p.total);
-                  <section [attr.data-status]="state.environmentHealth(p, $any(environment))">
-                    <div class="environment-overview-heading">
-                      <b>{{ environment }}</b>
-                      <small>{{ state.environmentHealth(p, $any(environment)) }}</small>
-                    </div>
-                    <div class="environment-progress-highlight">
-                      <strong>{{ progress }}%</strong>
-                      <span
-                        ><b>{{ stats.passed + stats.failed }}</b> / {{ p.total }} executed</span
-                      >
-                    </div>
-                    <div class="project-progress"><i [style.width.%]="progress"></i></div>
-                    <div class="environment-result-grid">
-                      <span
-                        ><b>{{ stats.passed }}</b
-                        ><small>Passed</small></span
-                      >
-                      <span
-                        ><b>{{ stats.failed }}</b
-                        ><small>Failed</small></span
-                      >
-                      <span
-                        ><b>{{ stats.blocked }}</b
-                        ><small>Blocked</small></span
-                      >
-                      <span
-                        ><b>{{ stats.notRun }}</b
-                        ><small>Not run</small></span
-                      >
-                    </div>
-                    <div class="environment-metrics">
-                      <span
-                        ><small>VELOCITY</small><b>{{ p.velocity ? p.velocity.toFixed(2) + '%/day' : '—' }}</b></span
-                      >
-                      <span
-                        ><small>TARGET</small
-                        ><b>{{ environment === 'STAGING' ? p.stagingEnd : p.betaEnd }}</b></span
-                      >
-                      <span
-                        ><small>ETA</small
-                        ><b>{{ (environment === 'STAGING' ? p.stagingEta : p.betaEta) || '—' }}</b></span
-                      >
-                      <span
-                        ><small>TIME LEFT</small
-                        ><b>{{
-                          state.timeRemaining(
-                            environment === 'STAGING' ? p.stagingDaysLeft : p.betaDaysLeft
-                          )
-                        }}</b></span
-                      >
-                      <span
-                        ><small>NEED</small><b>{{ p.requiredVelocity ? p.requiredVelocity.toFixed(2) + '%/day' : '—' }}</b></span
-                      >
-                      <span
-                        ><small>MTTT</small><b>{{ state.environmentMttt(p, $any(environment)) }}</b></span
-                      >
-                    </div>
-                  </section>
-                }
-              </div>
-
-              <footer class="project-overview-footer">
-                <span class="project-avatar">{{ state.initials(p.qa) }}</span>
+            </div>
+            <div class="project-progress"><i [style.width.%]="progress"></i></div>
+            <div class="environment-result-grid">
+              <span
+                ><b>{{ stats.passed }}</b
+                ><small>Passed</small></span
+              >
+              <span
+                ><b>{{ stats.failed }}</b
+                ><small>Failed</small></span
+              >
+              <span
+                ><b>{{ stats.blocked }}</b
+                ><small>Blocked</small></span
+              >
+              <span
+                ><b>{{ stats.notRun }}</b
+                ><small>Not run</small></span
+              >
+            </div>
+            <div class="environment-metrics">
+              @if (p.velocity) {
                 <span
-                  ><small>PRIMARY QA</small><strong>{{ p.qa }}</strong></span
+                  ><small>VELOCITY</small><b>{{ p.velocity.toFixed(2) }}%/day</b></span
                 >
+              }
+              <span
+                ><small>TARGET</small
+                ><b>{{ environment === 'STAGING' ? p.stagingEnd : p.betaEnd }}</b></span
+              >
+              @if (environment === 'STAGING' ? p.stagingEta : p.betaEta) {
                 <span
-                  ><small>QASE RUNS</small><strong>{{ p.testRuns.length }}</strong></span
+                  ><small>ETA</small
+                  ><b>{{ environment === 'STAGING' ? p.stagingEta : p.betaEta }}</b></span
                 >
-                <button class="secondary" (click)="state.openProject(p)">Project detail ↗</button>
-              </footer>
-            </article>
-          } @empty {
-            <p class="empty">No projects match the selected filters.</p>
-          }
-        </section>
+              }
+              <span
+                ><small>TIME LEFT</small
+                ><b>{{
+                  state.timeRemaining(
+                    environment === 'STAGING' ? p.stagingDaysLeft : p.betaDaysLeft
+                  )
+                }}</b></span
+              >
+              @if (p.requiredVelocity) {
+                <span
+                  ><small>NEED</small><b>{{ p.requiredVelocity.toFixed(2) }}%/day</b></span
+                >
+              }
+              <span
+                ><small>MTTT</small><b>{{ state.environmentMttt(p, $any(environment)) }}</b></span
+              >
+            </div>
+          </section>
+        }
+      </div>
+
+      <footer class="project-overview-footer">
+        <span class="project-avatar">{{ state.initials(p.qa) }}</span>
+        <span
+          ><small>PRIMARY QA</small><strong>{{ p.qa }}</strong></span
+        >
+        <span
+          ><small>QASE RUNS</small><strong>{{ p.testRuns.length }}</strong></span
+        >
+        <button class="secondary btn-green" (click)="openProject(p)">Project detail ↗</button>
+      </footer>
+    </article>
+  } @empty {
+    <p class="empty">No projects match the selected filters.</p>
+  }
+</section>
+@if (state.projectCards().length > cardPageSize) {
+  <div class="table-pagination">
+    <span>Page {{ currentCardPage() }} of {{ cardPageCount() }} ({{ state.projectCards().length }} projects)</span>
+    <div class="table-pagination-actions">
+      <button class="secondary" [disabled]="currentCardPage() <= 1" (click)="cardPage.set(currentCardPage() - 1)">Previous</button>
+      <button class="secondary" [disabled]="currentCardPage() >= cardPageCount()" (click)="cardPage.set(currentCardPage() + 1)">Next</button>
+    </div>
+  </div>
+}
+<section class="panel spaced-panel project-defects" aria-labelledby="project-defects-title">
+  <div class="panel-heading">
+    <div>
+      <h2 id="project-defects-title">High-priority defects</h2>
+      <p>Jira defects limited to High, Highest, and Blocker priority.</p>
+    </div>
+    <span class="source-tag">Jira</span>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>DEFECT / TITLE</th>
+          <th>PROJECT</th>
+          <th>PRIORITY</th>
+          <th>STATUS</th>
+          <th>REPORTER</th>
+          <th>OWNER</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (bug of pagedHighPriorityDefects(); track bug.key) {
+          <tr>
+            <td>
+              <a [href]="'https://gli.atlassian.net/browse/' + bug.key" target="_blank" rel="noopener"
+                ><strong>{{ bug.title }}</strong
+                ><small class="ticket">{{ bug.key }} ↗</small></a
+              >
+            </td>
+            <td>{{ bug.init }}</td>
+            <td>
+              <span class="badge" [class]="'badge prio-' + state.priorityTone(bug.priority)">{{ bug.priority }}</span>
+            </td>
+            <td>
+              <span class="badge status-badge" [class]="'badge status-badge st-' + state.statusTone(bug.status)">{{ bug.status }}</span>
+            </td>
+            <td>{{ bug.reporter }}</td>
+            <td>{{ bug.owner }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty">No High, Highest, or Blocker defects.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (state.highPriorityDefects().length > 0) {
+    <div class="table-pagination">
+      <span>
+        Page {{ currentDefectPage() }} of {{ defectPageCount() }} ({{
+          state.highPriorityDefects().length
+        }} defects)
+      </span>
+      <div class="table-pagination-actions">
+        <button
+          class="secondary"
+          [disabled]="currentDefectPage() <= 1"
+          (click)="defectPage.set(currentDefectPage() - 1)"
+        >
+          Previous
+        </button>
+        <button
+          class="secondary"
+          [disabled]="defectPage() >= defectPageCount()"
+          (click)="defectPage.set(currentDefectPage() + 1)"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  }
+</section>

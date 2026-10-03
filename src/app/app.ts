@@ -52,5 +52,5 @@ export class App {
 }
 
 function slugify(page: string): string {
-  return page.toLowerCase().replace(/\s+/g, '-');
+  return page.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 }

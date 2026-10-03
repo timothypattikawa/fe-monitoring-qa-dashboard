@@ -1,59 +1,28 @@
-# MonitoringQaAlfagift
+# Alfagift QA Workspace
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.23.
+Angular 21 frontend for the approved QA monitoring dashboard. It has four routes: Projects, Workflow, Workload, and Bugs. **Demo mode** keeps the approved sample design. **API mode** reads stored data and sync history from the Go backend; errors never substitute demo numbers.
 
-## Development server
-
-To start a local development server, run:
+## Run locally
 
 ```bash
-ng serve
+npm ci
+npm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Open `http://localhost:4200/projects`. The Angular dev proxy forwards `/api/v1` to the existing Go server at `http://127.0.0.1:3002`; change `proxy.conf.json` if the backend uses another port. The Go API and PostgreSQL must be running for API mode. Select **API MODE** in the top bar. Enter the manager API key only when adding a project mapping or queuing a manual sync; the FE holds this key in memory and does not persist it. Jira and Qase credentials belong exclusively in the Go backend environment.
 
 ```bash
-ng generate component component-name
+npm run build
+npm test -- --watch=false
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Structure
 
-```bash
-ng generate --help
-```
+- `src/app/app.*`, `app.routes.ts`: shell, sidebar, header, routing.
+- `src/app/core/`: typed Go HTTP client, live state, reusable demo state and fixtures.
+- `src/app/pages/`: approved Projects, Workflow, Workload, Bugs demo pages.
+- `src/app/shared/dashboard-dialogs/`: shared project and QA detail dialogs.
+- `src/app/shared/live-dashboard/`: API-backed pages, project detail, sync history and job event log.
+- `docs/FRONTEND-ARCHITECTURE.md`, `docs/BACKEND-MVP-GO.md`, `docs/SYNC-RUNBOOK-JIRA-QASE.md`: architecture and sync contract.
 
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+The backend accepts the temporary JQL file provided by the project owner through environment configuration. Accurate cross-system counts still require Jira base URL, a verified INIT-to-bug relationship, and explicit INIT-to-Qase project mappings. Qase platform run labels such as AOS, IOS, BO, DB, and APO are independent from the Staging/Beta environment.

@@ -1,0 +1,99 @@
+<section class="live-status" aria-label="API source status">
+  <div>
+    <strong>Go API</strong>
+    <span>Snapshot: {{ live.asOf() ? (live.asOf() | date:'medium') : 'Belum tersedia' }}</span>
+  </div>
+  @if (live.sources(); as sources) {
+    @if (sources.jira; as jira) {
+      <span class="source-pill">Jira · {{ jira.status }} · {{ jira.syncedAt ? (jira.syncedAt | date:'short') : 'never' }}</span>
+    }
+    @if (sources.qase; as qase) {
+      <span class="source-pill">Qase · {{ qase.status }} · {{ qase.syncedAt ? (qase.syncedAt | date:'short') : 'never' }}</span>
+    }
+  }
+  <button class="secondary" (click)="live.refresh()" [disabled]="live.loading()">Refresh</button>
+</section>
+
+<section class="live-card live-history" aria-label="Sync history">
+  <div class="live-card-head">
+    <div><h2>Sync history</h2><p>Durable Jira and Qase job log from PostgreSQL.</p></div>
+    <button class="secondary" (click)="live.refresh()">Refresh log</button>
+  </div>
+  <div class="live-scroll">
+    <table>
+      <thead><tr><th>REQUESTED</th><th>JOB</th><th>STATUS</th><th>JIRA / QASE</th><th>DETAIL</th></tr></thead>
+      <tbody>
+        @for (job of live.jobs(); track job.id) {
+          <tr>
+            <td>{{ job.requestedAt | date:'medium' }}</td>
+            <td><code>{{ job.id.slice(0, 8) }}</code></td>
+            <td>{{ job.status }}</td>
+            <td>@for (step of job.steps; track step.id) { <span class="source-pill">{{ step.source }} {{ step.status }}</span> }</td>
+            <td><button class="secondary" (click)="live.showJob(job)">View log</button></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="5">No sync jobs yet.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<dialog #jobDialog class="live-modal" aria-labelledby="live-job-title" (close)="live.selectedJob.set(null)">
+  @if (live.selectedJob(); as job) {
+    <button type="button" class="live-close" aria-label="Close sync job log" (click)="jobDialog.close()">×</button>
+    <h2 id="live-job-title">Sync job {{ job.id.slice(0, 8) }}</h2>
+    <p>{{ job.status }} · {{ job.requestedAt | date:'medium' }}</p>
+    @for (step of job.steps; track step.id) {
+      <div class="live-step">
+        <strong>{{ step.source }} · {{ step.status }}</strong>
+        <span>Fetched {{ step.fetched }} · Inserted {{ step.inserted }} · Updated {{ step.updated }} · Skipped {{ step.skipped }}</span>
+        @if (step.errorCode) { <small>{{ step.errorCode }}</small> }
+      </div>
+    }
+    <h3>Events</h3>
+    @for (event of job.events ?? []; track event.id) {
+      <p class="live-event"><time>{{ event.occurredAt | date:'short' }}</time><strong>{{ event.code }}</strong> {{ event.message }}</p>
+    } @empty { <p>No events recorded.</p> }
+  }
+</dialog>
+
+<dialog #projectFormDialog class="live-modal" aria-labelledby="live-project-form-title" (close)="live.projectFormOpen.set(false)">
+  <form (ngSubmit)="live.addProject()">
+    <div class="dialog-heading">
+      <div><p class="eyebrow">PROJECT REGISTRATION</p><h2 id="live-project-form-title">Add QA project</h2></div>
+      <button type="button" class="live-close" aria-label="Close project form" (click)="projectFormDialog.close()">×</button>
+    </div>
+    <p>Jira resolves the stable issue ID from the INIT key during sync.</p>
+    <div class="form-grid">
+      <label>Jira INIT key<input name="jiraInitKey" [(ngModel)]="live.projectDraft.jiraInitKey" placeholder="INIT-358" required pattern="[A-Za-z][A-Za-z0-9]*-[0-9]+" /></label>
+      <label>Project name<input name="name" [(ngModel)]="live.projectDraft.name" required /></label>
+      <label>Qase project code<input name="qaseProjectCode" [(ngModel)]="live.projectDraft.qaseProjectCode" required /></label>
+      <label>Project size
+        <select name="projectSize" [(ngModel)]="live.projectDraft.projectSize">
+          <option value="">Not set</option>
+          @for (size of ['S', 'M', 'L', 'XL', '2XL', '3XL', '4L', '5L']; track size) { <option>{{ size }}</option> }
+        </select>
+      </label>
+      <label>MTTT Staging (minutes)<input name="stagingMtttMinutes" type="number" min="0" [(ngModel)]="live.projectDraft.stagingMtttMinutes" /></label>
+      <label>MTTT Beta (minutes)<input name="betaMtttMinutes" type="number" min="0" [(ngModel)]="live.projectDraft.betaMtttMinutes" /></label>
+      <label class="full">QA owner
+        <select name="qaOwner" [(ngModel)]="live.projectDraft.qaOwner" required>
+          <option value="" disabled>Select a QA member</option>
+          @for (m of live.qaMembers(); track m.id) {
+            <option [value]="m.name">{{ m.name }}</option>
+          }
+        </select>
+      </label>
+      <label>Staging start<input name="stagingStart" type="date" [(ngModel)]="live.projectDraft.stagingStart" required /></label>
+      <label>Staging end<input name="stagingEnd" type="date" [min]="live.projectDraft.stagingStart" [(ngModel)]="live.projectDraft.stagingEnd" required /></label>
+      <label>Beta start<input name="betaStart" type="date" [(ngModel)]="live.projectDraft.betaStart" required /></label>
+      <label>Beta end<input name="betaEnd" type="date" [min]="live.projectDraft.betaStart" [(ngModel)]="live.projectDraft.betaEnd" required /></label>
+    </div>
+    @if (live.error()) { <p class="live-alert" role="alert">{{ live.error() }}</p> }
+    <div class="dialog-actions">
+      <button type="button" class="secondary" (click)="projectFormDialog.close()">Cancel</button>
+      <button type="submit" class="primary" [disabled]="live.submitting()">{{ live.submitting() ? 'Saving…' : 'Save project' }}</button>
+    </div>
+  </form>
+</dialog>

@@ -1,13 +1,18 @@
-<dialog (close)="state.selectedMember.set(null)" #qaDetail class="qa-detail-dialog" aria-labelledby="qa-detail-title">
+<dialog
+  (close)="state.selectedMember.set(null)"
+  #qaDetail
+  class="qa-detail-dialog"
+  aria-labelledby="qa-detail-title"
+>
   @if (state.selectedMember(); as m) {
-    @let activity = state.memberExecution(m.name);
+    @let activity = state.memberWorkloadExecution(m.name);
     <div class="dialog-heading qa-profile-heading">
       <div class="owner">
         <span class="avatar" [class]="'avatar ' + m.color">{{ m.initials }}</span>
         <div>
           <p class="eyebrow">QA EXECUTION DETAIL</p>
           <h2 id="qa-detail-title">{{ m.name }}</h2>
-          <small>{{ m.role }} · Qase activity on 16 Sep 2026</small>
+          <small>{{ m.role }} · Qase activity · last {{ state.workloadDates.length }} days</small>
         </div>
       </div>
       <button class="close" aria-label="Close execution detail" (click)="qaDetail.close()">
@@ -25,10 +30,11 @@
       </div>
       <div>
         <small>ACTIVE PROJECTS</small><strong>{{ activity.projects }}</strong
-        ><span>Touched today</span>
+        ><span>In the last {{ state.workloadDates.length }} days</span>
       </div>
       <div>
-        <small>PASS RATE</small><strong>{{ state.percent(activity.passed, activity.executed) }}%</strong
+        <small>PASS RATE</small
+        ><strong>{{ state.percent(activity.passed, activity.executed) }}%</strong
         ><span>Of executed tests</span>
       </div>
     </div>
@@ -49,7 +55,7 @@
     <section class="panel execution-history-panel">
       <div class="panel-heading">
         <div>
-          <h2>Today’s project and test-run activity</h2>
+          <h2>Project and test-run activity</h2>
           <p>Recorded execution for {{ m.name }} from Qase.</p>
         </div>
         <span class="source-tag">{{ activity.runs }} runs</span>
@@ -69,7 +75,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (run of state.memberRuns(m.name); track run.id) {
+            @for (run of state.pagedMemberRuns(m.name); track run.id) {
               <tr>
                 <td>
                   <strong>{{ run.key }}</strong
@@ -94,6 +100,15 @@
           </tbody>
         </table>
       </div>
+      @if (state.memberWindowRuns(m.name).length > 0) {
+        <div class="table-pagination">
+          <span>Page {{ state.memberRunPage() }} of {{ state.memberRunPageCount(m.name) }}</span>
+          <div class="table-pagination-actions">
+            <button class="secondary" [disabled]="state.memberRunPage() <= 1" (click)="state.memberRunPage.set(state.memberRunPage() - 1)">Previous</button>
+            <button class="secondary" [disabled]="state.memberRunPage() >= state.memberRunPageCount(m.name)" (click)="state.memberRunPage.set(state.memberRunPage() + 1)">Next</button>
+          </div>
+        </div>
+      }
     </section>
     <p class="workload-method-note">
       Workload here means observed execution throughput, not an overload score. Qase test counts do
@@ -104,7 +119,12 @@
     </div>
   }
 </dialog>
-<dialog (close)="state.selected.set(null)" #detail class="detail-dialog" aria-labelledby="detail-title">
+<dialog
+  (close)="state.selected.set(null)"
+  #detail
+  class="detail-dialog"
+  aria-labelledby="detail-title"
+>
   @if (state.selected(); as p) {
     <div class="dialog-heading">
       <div>
@@ -115,14 +135,11 @@
     </div>
     <p class="subtitle">
       {{ p.qa }} · STG {{ p.stagingStart }} — {{ p.stagingEnd }} · BETA {{ p.betaStart }} —
-      {{ p.betaEnd }} · Demo data
+      {{ p.betaEnd }}
     </p>
     <div class="project-summary-strip">
       <div>
         <small>DOMAIN</small><strong>{{ p.domain }}</strong>
-      </div>
-      <div>
-        <small>SPRINT / SIZE</small><strong>{{ p.sprint }} · {{ p.size }}</strong>
       </div>
       <div>
         <small>TARGET VERSION</small><strong>{{ p.version }}</strong>
@@ -145,42 +162,60 @@
       }
     </div>
     @if (state.detailTab() === 'Testing') {
-      <div class="execution-summary">
-        <div
-          class="execution-donut"
-          role="img"
-          [attr.aria-label]="'Execution ' + state.percent(p.passed + p.failed, p.total) + '%'"
-          [style.background]="state.testDistribution(p)"
-        >
-          <div>
-            <strong>{{ state.percent(p.passed + p.failed, p.total) }}%</strong>
-            <small>Executed</small>
-          </div>
-        </div>
-        <div class="detail-stats">
-          <div class="passed-stat">
-            <strong>{{ p.passed }}</strong
-            >Passed
-          </div>
-          <div class="failed-stat">
-            <strong>{{ p.failed }}</strong
-            >Failed
-          </div>
-          <div class="blocked-stat">
-            <strong>{{ p.blocked }}</strong
-            >Blocked
-          </div>
-          <div class="not-run-stat">
-            <strong>{{ p.total - p.passed - p.failed - p.blocked }}</strong
-            >Not run
-          </div>
-        </div>
+      <div class="environment-execution-summary">
+        @for (environment of ['STAGING', 'BETA']; track environment) {
+          @let stats = state.environmentStats(p, $any(environment));
+          @let executed = stats.passed + stats.failed;
+          <section>
+            <div
+              class="execution-donut"
+              role="img"
+              [attr.aria-label]="
+                environment +
+                ' execution ' +
+                state.executionPercent(stats.passed, stats.failed, stats.total) +
+                '%'
+              "
+              [style.background]="state.environmentDistribution(p, $any(environment))"
+            >
+              <div>
+                <strong
+                  >{{ state.executionPercent(stats.passed, stats.failed, stats.total) }}%</strong
+                >
+                <small>{{ environment }}</small>
+              </div>
+            </div>
+            <div class="detail-stats">
+              <div class="passed-stat">
+                <strong>{{ stats.passed }}</strong
+                >Passed
+              </div>
+              <div class="failed-stat">
+                <strong>{{ stats.failed }}</strong
+                >Failed
+              </div>
+              <div class="blocked-stat">
+                <strong>{{ stats.blocked }}</strong
+                >Blocked
+              </div>
+              <div class="not-run-stat">
+                <strong>{{ stats.notRun }}</strong
+                >Not run
+              </div>
+            </div>
+            <p class="dialog-note">
+              Execution:
+              {{
+                stats.total
+                  ? state.executionPercent(stats.passed, stats.failed, stats.total) + '%'
+                  : 'N/A'
+              }}
+              · Pass rate: {{ executed ? state.percent(stats.passed, executed) + '%' : 'N/A' }}.
+            </p>
+          </section>
+        }
       </div>
-      <p class="dialog-note">
-        Execution: {{ p.total ? state.percent(p.passed + p.failed, p.total) + '%' : 'N/A' }} · Pass rate:
-        {{ p.passed + p.failed ? state.percent(p.passed, p.passed + p.failed) + '%' : 'N/A' }}. Latest
-        result per instance; blocked and not-run tests are excluded from executed totals.
-      </p>
+      <p class="dialog-note">Blocked and not-run tests are excluded from executed totals.</p>
       <h3 class="test-run-heading">Qase test runs</h3>
       <div class="environment-grid">
         <section>
@@ -192,10 +227,12 @@
               state.environmentHealth(p, 'STAGING')
             }}</span>
           </div>
-          <div class="progress"><i [style.width.%]="p.staging"></i></div>
+          <div class="progress" [attr.data-status]="state.environmentHealth(p, 'STAGING')">
+            <i [style.width.%]="p.staging"></i>
+          </div>
           <div class="environment-facts">
-            <span>Velocity {{ p.velocity }}%/day</span
-            ><span>Required {{ p.requiredVelocity }}%/day</span><span>ETA {{ p.stagingEta }}</span
+            <span>Velocity {{ p.velocity.toFixed(1) }}%/day</span
+            ><span>Required {{ p.requiredVelocity.toFixed(1) }}%/day</span><span>ETA {{ p.stagingEta }}</span
             ><span>{{ state.timeRemaining(p.stagingDaysLeft) }}</span>
           </div>
           <div class="test-run-list">
@@ -233,9 +270,13 @@
               state.environmentHealth(p, 'BETA')
             }}</span>
           </div>
-          <div class="progress"><i class="beta-progress" [style.width.%]="p.beta"></i></div>
+          <div class="progress" [attr.data-status]="state.environmentHealth(p, 'BETA')">
+            <i class="beta-progress" [style.width.%]="p.beta"></i>
+          </div>
           <div class="environment-facts">
-            <span>{{ p.total - p.passed - p.failed - p.blocked }} remaining</span
+            <span>Velocity {{ p.betaVelocity.toFixed(1) }}%/day</span
+            ><span>Required {{ p.betaRequiredVelocity.toFixed(1) }}%/day</span
+            ><span>{{ p.total - p.passed - p.failed - p.blocked }} remaining</span
             ><span>ETA {{ p.betaEta }}</span
             ><span>{{ state.timeRemaining(p.betaDaysLeft) }}</span>
           </div>
@@ -271,8 +312,8 @@
       <section class="testcase-authorship-panel">
         <div class="section-title">
           <div>
-            <h2>Test cases created in Qase</h2>
-            <span>Creator ownership is separate from who executes the runs below.</span>
+            <h2>Testcase Created in Qase</h2>
+            <span>Creation ownership, resolved from the QA PIC field of each test case.</span>
           </div>
           <strong>{{ p.total }} total test cases</strong>
         </div>
@@ -308,12 +349,12 @@
         <div class="section-title">
           <div>
             <h2>Daily execution trend</h2>
-            <span>Five recent workdays by assignee · Qase demonstration dataset</span>
+            <span>Executions by assignee, from Qase run history and retries</span>
           </div>
           <div class="chart-legend" aria-label="Assignee legend">
-            @for (name of state.projectAssignees(p); track name; let personIndex = $index) {
+            @for (name of state.projectAssignees(p); track name) {
               <span
-                ><i [style.background]="state.seriesColors[personIndex % state.seriesColors.length]"></i
+                ><i [style.background]="state.executionHistoryTesterColor(p, name)"></i
                 >{{ name }}</span
               >
             }
@@ -326,51 +367,159 @@
             [attr.aria-label]="'Daily test execution by assignee for ' + p.name"
           >
             <div class="chart-grid-lines" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-            @for (date of state.chartDates; track date; let dayIndex = $index) {
+            @for (date of state.projectChartDates(p); track date; let dayIndex = $index) {
               <div class="bar-group">
                 <div class="bar-cluster">
-                  @for (name of state.projectAssignees(p); track name; let personIndex = $index) {
+                  @for (name of state.projectAssignees(p); track name) {
                     @let value = state.projectChartValue(p, name, dayIndex);
                     <button
                       class="chart-bar"
                       [style.height.%]="state.percent(value, state.projectChartMax(p))"
-                      [style.background]="state.seriesColors[personIndex % state.seriesColors.length]"
-                      [attr.aria-label]="date + ', ' + name + ': ' + value + ' executed'"
-                      [attr.data-tip]="name + ' · ' + value"
+                      [style.background]="state.executionHistoryTesterColor(p, name)"
+                      [attr.aria-label]="
+                        state.dateLabel(date) + ', ' + name + ': ' + value + ' executed'
+                      "
                     ></button>
                   }
                 </div>
-                <span>{{ date }}</span>
+                <div class="day-tip" role="tooltip">
+                  <strong>{{ state.dateLabel(date) }}</strong>
+                  <table>
+                    <thead>
+                      <tr><th></th><th>Executed</th></tr>
+                    </thead>
+                    <tbody>
+                      @for (name of state.projectAssignees(p); track name) {
+                        <tr>
+                          <td>
+                            <i [style.background]="state.executionHistoryTesterColor(p, name)"></i
+                            >{{ name }}
+                          </td>
+                          <td>{{ state.projectChartValue(p, name, dayIndex) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                <span>{{ state.dateLabel(date) }}</span>
               </div>
             }
           </div>
         </div>
       </section>
+      <section class="execution-history-panel">
+        <div class="section-title">
+          <h2>Detailed Execution History</h2>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>PIC</th>
+                <th>Environment</th>
+                <th>Passed</th>
+                <th>Failed</th>
+                <th>Blocked</th>
+                <th>Skipped</th>
+                <th>Retest</th>
+                <th>In Progress</th>
+                <th>Invalid</th>
+                <th>Cancel</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (
+                row of state.pagedExecutionHistory(p);
+                track row.date + row.tester + row.environment
+              ) {
+                <tr>
+                  <td>
+                    <strong>{{ row.date }}</strong>
+                  </td>
+                  <td>
+                    <i
+                      class="pic-dot"
+                      [style.background]="state.executionHistoryTesterColor(p, row.tester)"
+                    ></i
+                    >{{ row.tester }}
+                  </td>
+                  <td>
+                    <span class="environment-tag">{{ row.environment }}</span>
+                  </td>
+                  <td>{{ row.passed }}</td>
+                  <td>{{ row.failed }}</td>
+                  <td>{{ row.blocked }}</td>
+                  <td>{{ row.skipped }}</td>
+                  <td>{{ row.retest }}</td>
+                  <td>{{ row.inProgress }}</td>
+                  <td>{{ row.invalid }}</td>
+                  <td>{{ row.cancelled }}</td>
+                  <td>
+                    <strong>{{ row.executed }}</strong>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="12" class="empty">No execution history in the last 5 days.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (state.sortedExecutionHistory(p).length > 0) {
+          <div class="table-pagination">
+            <span>Page {{ state.executionHistoryPage() }} of {{ state.executionHistoryPageCount(p) }}</span>
+            <div class="table-pagination-actions">
+              <button class="secondary" [disabled]="state.executionHistoryPage() <= 1" (click)="state.executionHistoryPage.set(state.executionHistoryPage() - 1)">Previous</button>
+              <button class="secondary" [disabled]="state.executionHistoryPage() >= state.executionHistoryPageCount(p)" (click)="state.executionHistoryPage.set(state.executionHistoryPage() + 1)">Next</button>
+            </div>
+          </div>
+        }
+      </section>
       <section class="assignee-progress-panel">
         <div class="section-title">
           <h2>Execution progress by assignee</h2>
-          <span>Runner ownership from the latest Qase test runs</span>
+          <span>Runner ownership from the latest Qase test runs, split by environment</span>
         </div>
-        <div class="assignee-progress-list">
-          @for (name of state.projectAssignees(p); track name) {
-            @let activity = state.memberExecution(name, p);
-            <article>
-              <span class="project-avatar">{{ state.initials(name) }}</span>
-              <div class="assignee-progress-copy">
-                <strong>{{ name }}</strong>
-                <small
-                  >{{ activity.runs }} runs · {{ activity.executed }} executed ·
-                  {{ activity.total }} assigned</small
-                >
-                <div class="execution-track">
-                  <i [style.width.%]="state.percent(activity.executed, activity.total)"></i>
-                </div>
+        <div class="environment-grid">
+          @for (environment of ['STAGING', 'BETA']; track environment) {
+            <section>
+              <div class="environment-title">
+                <div><strong>{{ environment }}</strong></div>
               </div>
-              <div class="assignee-result">
-                <strong>{{ state.percent(activity.executed, activity.total) }}%</strong>
-                <small>{{ activity.passed }} passed · {{ activity.failed }} failed</small>
+              @let env = state.environmentStats(p, $any(environment));
+              @let executed = env.passed + env.failed + env.blocked;
+              <p class="assignee-env-summary">
+                {{ state.environmentRunCount(p, $any(environment)) }} active runs · {{ executed }} executed of
+                {{ env.total }} · {{ state.percent(executed, env.total) }}% · {{ env.passed }} passed ·
+                {{ env.failed }} failed · {{ env.blocked }} blocked
+              </p>
+              <div class="assignee-progress-list">
+                @for (activity of state.assigneeProgress(p, $any(environment)); track activity.name) {
+                  <article>
+                    <span class="project-avatar">{{ state.initials(activity.name) }}</span>
+                    <div class="assignee-progress-copy">
+                      <strong>{{ activity.name || 'Unassigned' }}</strong>
+                      <small
+                        >{{ activity.activeRuns }} runs · {{ activity.executed }} executed ·
+                        {{ activity.total }} assigned</small
+                      >
+                      <div class="execution-track">
+                        <i [style.width.%]="activity.progress"></i>
+                      </div>
+                    </div>
+                    <div class="assignee-result">
+                      <strong>{{ activity.progress }}%</strong>
+                      <small>{{ activity.passed }} passed · {{ activity.failed }} failed · {{ activity.blocked }} blocked</small>
+                    </div>
+                  </article>
+                } @empty {
+                  <p class="empty">No {{ environment }} assignee activity</p>
+                }
               </div>
-            </article>
+            </section>
           }
         </div>
       </section>
@@ -397,13 +546,13 @@
               </tr>
             </thead>
             <tbody>
-              @for (run of p.testRuns; track run.id) {
+              @for (run of state.pagedProjectRunHistory(p); track run.id) {
                 <tr>
                   <td>
                     <strong>{{ run.date }}</strong>
                   </td>
                   <td>
-                    <strong>{{ run.owner }}</strong>
+                    <strong>{{ run.testers.join(', ') || '—' }}</strong>
                   </td>
                   <td>
                     <strong>{{ run.id }}</strong
@@ -424,6 +573,15 @@
             </tbody>
           </table>
         </div>
+        @if (p.testRuns.length > 0) {
+          <div class="table-pagination">
+            <span>Page {{ state.projectRunHistoryPage() }} of {{ state.projectRunHistoryPageCount(p) }}</span>
+            <div class="table-pagination-actions">
+              <button class="secondary" [disabled]="state.projectRunHistoryPage() <= 1" (click)="state.projectRunHistoryPage.set(state.projectRunHistoryPage() - 1)">Previous</button>
+              <button class="secondary" [disabled]="state.projectRunHistoryPage() >= state.projectRunHistoryPageCount(p)" (click)="state.projectRunHistoryPage.set(state.projectRunHistoryPage() + 1)">Next</button>
+            </div>
+          </div>
+        }
       </section>
     }
     @if (state.detailTab() === 'Bugs') {
@@ -434,7 +592,7 @@
         </div>
         <div>
           <strong>{{ p.critical }}</strong
-          >Critical open
+          >Critical / Blocker open
         </div>
         <div>
           <strong>{{ p.stagingBugs }}</strong
@@ -446,55 +604,72 @@
         </div>
         <div>
           <strong>{{ p.escapedBugs }}</strong
-          >Escaped
+          >Escaped to Beta
         </div>
       </div>
       <p class="dialog-note">
-        Beta share: {{ state.percent(p.betaBugs, p.bugs) }}% · Escape ratio:
-        {{ state.percent(p.escapedBugs, p.bugs) }}% · {{ p.canceledBugs }} canceled. Attributed creator:
-        {{ p.qa }} and linked through {{ p.key }}.
+        Beta share:
+        <strong [class.red-text]="state.betaBugThreshold(p)" [class.blue-text]="!state.betaBugThreshold(p)">{{
+          state.percent(p.betaBugs, p.stagingBugs)
+        }}%</strong>
+        of staging · Escape ratio:
+        {{ state.percent(p.escapedBugs, p.bugs) }}% · {{ p.canceledBugs }} canceled. Attributed
+        creator: {{ p.qa }} and linked through {{ p.key }}.
       </p>
       <div class="jira-board-heading">
         <div class="environment-switch" role="group" aria-label="Bug environment">
+          <button
+            [class.chosen]="state.bugEnvironment() === 'All environments'"
+            (click)="state.bugEnvironment.set('All environments')"
+          >
+            All
+          </button>
           <button
             [class.chosen]="state.bugEnvironment() === 'STAGING'"
             (click)="state.bugEnvironment.set('STAGING')"
           >
             Staging
           </button>
-          <button [class.chosen]="state.bugEnvironment() === 'BETA'" (click)="state.bugEnvironment.set('BETA')">
+          <button
+            [class.chosen]="state.bugEnvironment() === 'BETA'"
+            (click)="state.bugEnvironment.set('BETA')"
+          >
             Beta
           </button>
         </div>
-        <span class="source-tag">Jira · Sample</span>
+        <span class="source-tag">Jira · {{ p.key }}</span>
       </div>
       <div class="jira-board">
         @for (reporter of state.defectReporters(p.key); track reporter) {
-          <section class="jira-column">
+          <div class="jira-column">
             <h3>{{ reporter }}</h3>
-            <span class="badge muted-badge"
-              >{{ state.reporterDefects(p.key, reporter).length }} issue</span
-            >
-            @for (bug of state.reporterDefects(p.key, reporter); track bug.key) {
-              <article class="jira-card">
-                <div class="jira-card-key">
-                  <span [class.red-text]="bug.severity === 'Critical'">◆</span>
-                  <strong>{{ bug.key }}</strong>
-                </div>
-                <h4>{{ bug.title }}</h4>
-                <p>
-                  Assignee: <strong>{{ bug.owner }}</strong> · Age: <strong>{{ bug.age }}</strong>
-                </p>
+            <div class="jira-column-badges">
+              @for (item of state.reporterStatusCounts(p.key, reporter); track item.status) {
                 <span
                   class="badge"
-                  [class.danger]="bug.severity === 'Critical'"
-                  [class.amber]="bug.status === 'Open' || bug.status === 'Reopened'"
-                  [class.success]="bug.status === 'Ready'"
+                  [class.amber]="state.isOpenStatus(item.status)"
+                  [class.success]="!state.isOpenStatus(item.status)"
+                  >{{ item.status }} ({{ item.count }})</span
+                >
+              }
+            </div>
+            @for (bug of state.reporterDefects(p.key, reporter); track bug.key) {
+              <a class="jira-card" href="https://gli.atlassian.net/browse/{{ bug.key }}" target="_blank" rel="noopener">
+                <div class="jira-card-key">
+                  <span>{{ bug.key }}</span>
+                  <span class="badge" [class]="'badge prio-' + state.priorityTone(bug.priority)">{{ bug.priority }}</span>
+                </div>
+                <h4>{{ bug.title }}</h4>
+                <p>{{ bug.owner }} · {{ bug.age }}</p>
+                <span
+                  class="badge"
+                  [class.amber]="state.isOpenStatus(bug.status)"
+                  [class.success]="!state.isOpenStatus(bug.status)"
                   >{{ bug.status }}</span
                 >
-              </article>
+              </a>
             }
-          </section>
+          </div>
         } @empty {
           <p class="empty">No Jira bugs for {{ state.bugEnvironment() }}.</p>
         }

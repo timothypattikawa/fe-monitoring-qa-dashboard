@@ -1,6 +1,18 @@
 @if (error()) {
   <p class="live-alert" role="alert">{{ error() }}</p>
 }
+@if (warnings(); as w) {
+  @if (w.qaseDisplayName || w.jiraEmail) {
+    <p class="live-alert" role="alert">
+      @if (w.qaseDisplayName) {
+        {{ w.qaseDisplayName }}
+      }
+      @if (w.jiraEmail) {
+        {{ w.jiraEmail }}
+      }
+    </p>
+  }
+}
 <section class="panel spaced-panel">
   <div class="panel-heading">
     <div>
@@ -19,19 +31,24 @@
           (ngModelChange)="draft.set({ ...draft(), name: $event })"
       /></label>
       <label
-        >Jira account ID
+        >Jira Email
         <input
-          name="jiraAccountId"
-          [ngModel]="draft().jiraAccountId"
-          (ngModelChange)="draft.set({ ...draft(), jiraAccountId: $event })"
-      /></label>
+          name="jiraEmail"
+          type="email"
+          [ngModel]="draft().jiraEmail"
+          (ngModelChange)="draft.set({ ...draft(), jiraEmail: $event })"
+        />
+        <small>Harus email yang terdaftar di Jira</small>
+      </label>
       <label
-        >Qase member ID
+        >Qase Display Name
         <input
-          name="qaseMemberId"
-          [ngModel]="draft().qaseMemberId"
-          (ngModelChange)="draft.set({ ...draft(), qaseMemberId: $event })"
-      /></label>
+          name="qaseDisplayName"
+          [ngModel]="draft().qaseDisplayName"
+          (ngModelChange)="draft.set({ ...draft(), qaseDisplayName: $event })"
+        />
+        <small>Harus sama persis dengan opsi QA PIC / QA Tester di Qase</small>
+      </label>
       <label
         >Weekly capacity hours
         <input
@@ -65,19 +82,19 @@
       <thead>
         <tr>
           <th>NAME</th>
-          <th>JIRA ACCOUNT</th>
-          <th>QASE MEMBER</th>
+          <th>JIRA EMAIL</th>
+          <th>QASE DISPLAY NAME</th>
           <th>WEEKLY HOURS</th>
           <th>STATUS</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        @for (m of members(); track m.id) {
+        @for (m of pagedMembers(); track m.id) {
           <tr>
             <td>{{ m.name }}</td>
-            <td>{{ m.jiraAccountId || '—' }}</td>
-            <td>{{ m.qaseMemberId || '—' }}</td>
+            <td>{{ m.jiraEmail || '—' }}</td>
+            <td>{{ m.qaseDisplayName || '—' }}</td>
             <td>{{ m.weeklyCapacityHours }}</td>
             <td>
               <span class="badge" [class.success]="m.active" [class.danger]="!m.active">
@@ -101,4 +118,13 @@
       </tbody>
     </table>
   </div>
+  @if (members().length > 0) {
+    <div class="table-pagination">
+      <span>Page {{ currentMemberPage() }} of {{ memberPageCount() }} ({{ members().length }} members)</span>
+      <div class="table-pagination-actions">
+        <button class="secondary" [disabled]="currentMemberPage() <= 1" (click)="memberPage.set(currentMemberPage() - 1)">Previous</button>
+        <button class="secondary" [disabled]="currentMemberPage() >= memberPageCount()" (click)="memberPage.set(currentMemberPage() + 1)">Next</button>
+      </div>
+    </div>
+  }
 </section>

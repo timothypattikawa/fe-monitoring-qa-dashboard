@@ -13,6 +13,9 @@ export class DashboardDialogsComponent {
 
   constructor() {
     effect(() => this.toggle(this.qaDetail()?.nativeElement, !!this.state.selectedMember()));
+    // Pure read: the detail tier is covered by the single global sync (see
+    // LiveDashboardStore.sync()), so opening this dialog never triggers a
+    // sync of its own.
     effect(() => this.toggle(this.detail()?.nativeElement, !!this.state.selected()));
   }
 

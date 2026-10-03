@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1200" viewBox="0 0 1440 1200">
+  <defs>
+    <style>
+      text{font-family:Inter,Arial,sans-serif;fill:#122039}.title{font-size:28px;font-weight:700}.h2{font-size:18px;font-weight:700}.h3{font-size:14px;font-weight:600}.body{font-size:13px}.small{font-size:12px}.muted{fill:#687386}.white{fill:#fff}.nav{fill:#c7cfdd;font-size:14px;font-weight:500}.kpi{font-size:28px;font-weight:700}.label{font-size:12px;font-weight:600;letter-spacing:.4px}.table{font-size:12px}.mono{font-variant-numeric:tabular-nums}</style>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="2" stdDeviation="5" flood-color="#122039" flood-opacity=".06"/></filter>
+  </defs>
+
+  <rect width="1440" height="1200" fill="#f7f9fc"/>
+  <rect width="240" height="1200" fill="#131c2c"/>
+
+  <!-- Sidebar -->
+  <rect x="20" y="24" width="34" height="34" rx="10" fill="#d91f35"/>
+  <path d="M30 35h14v3H30zm0 6h10v3H30z" fill="#fff"/>
+  <text x="66" y="48" class="white" font-size="20" font-weight="700">QA Pulse</text>
+  <text x="24" y="100" class="small" fill="#7f8ba0" font-weight="600">MONITORING</text>
+  <rect x="16" y="118" width="208" height="44" rx="9" fill="#d91f35"/>
+  <circle cx="36" cy="140" r="4" fill="#fff"/><text x="52" y="145" class="white" font-size="14" font-weight="600">Overview</text>
+  <circle cx="36" cy="184" r="4" fill="#7f8ba0"/><text x="52" y="189" class="nav">Project &amp; Testing</text>
+  <circle cx="36" cy="228" r="4" fill="#7f8ba0"/><text x="52" y="233" class="nav">Workload</text>
+  <circle cx="36" cy="272" r="4" fill="#7f8ba0"/><text x="52" y="277" class="nav">Knowledge RAG</text>
+  <circle cx="36" cy="316" r="4" fill="#7f8ba0"/><text x="52" y="321" class="nav">Data Quality</text>
+  <text x="24" y="382" class="small" fill="#7f8ba0" font-weight="600">ADMINISTRATION</text>
+  <circle cx="36" cy="416" r="4" fill="#7f8ba0"/><text x="52" y="421" class="nav">Configuration</text>
+  <rect x="16" y="1114" width="208" height="62" rx="10" fill="#1d293d"/>
+  <circle cx="42" cy="1145" r="17" fill="#40506a"/><text x="37" y="1150" class="white" font-size="13" font-weight="700">N</text>
+  <text x="70" y="1143" class="white" font-size="14" font-weight="600">Nona</text><text x="70" y="1161" class="small" fill="#8f9aae">QA Lead</text>
+
+  <!-- Header -->
+  <text x="272" y="61" class="title">QA Monitoring Overview</text>
+  <text x="272" y="87" class="body muted">Project health, testing, workload, and QA knowledge at a glance.</text>
+  <rect x="1194" y="40" width="214" height="38" rx="19" fill="#e7f6ec"/>
+  <circle cx="1215" cy="59" r="5" fill="#2ca15c"/><text x="1229" y="64" class="body" fill="#237b49" font-weight="600">Updated 5 minutes ago</text>
+
+  <!-- Filters -->
+  <g filter="url(#shadow)">
+    <rect x="272" y="118" width="1136" height="64" rx="12" fill="#fff"/>
+  </g>
+  <text x="292" y="144" class="small muted">Period</text><text x="292" y="163" class="body" font-weight="600">Last 30 days  ▾</text>
+  <line x1="472" y1="132" x2="472" y2="168" stroke="#e4e8ef"/>
+  <text x="492" y="144" class="small muted">Project</text><text x="492" y="163" class="body" font-weight="600">All projects  ▾</text>
+  <line x1="692" y1="132" x2="692" y2="168" stroke="#e4e8ef"/>
+  <text x="712" y="144" class="small muted">QA team</text><text x="712" y="163" class="body" font-weight="600">All QA members  ▾</text>
+  <rect x="1285" y="131" width="103" height="38" rx="8" fill="#d91f35"/><text x="1303" y="155" class="white body" font-weight="600">↻ Refresh</text>
+
+  <!-- KPI Cards -->
+  <g filter="url(#shadow)"><rect x="272" y="206" width="211" height="142" rx="12" fill="#fff"/><rect x="499" y="206" width="211" height="142" rx="12" fill="#fff"/><rect x="726" y="206" width="211" height="142" rx="12" fill="#fff"/><rect x="953" y="206" width="211" height="142" rx="12" fill="#fff"/><rect x="1180" y="206" width="228" height="142" rx="12" fill="#fff"/></g>
+  <rect x="292" y="226" width="36" height="36" rx="9" fill="#fff0d9"/><text x="304" y="250" font-size="17" fill="#d68a15">!</text>
+  <text x="292" y="283" class="label muted">PROJECT AT RISK</text><text x="292" y="321" class="kpi mono">3</text><text x="327" y="319" class="small" fill="#c26b10">+1 this week</text>
+  <rect x="519" y="226" width="36" height="36" rx="9" fill="#e8f7ed"/><text x="530" y="250" font-size="17" fill="#2ca15c">✓</text>
+  <text x="519" y="283" class="label muted">TEST EXECUTION</text><text x="519" y="321" class="kpi mono">78%</text><text x="585" y="319" class="small" fill="#2b9154">+6%</text>
+  <rect x="746" y="226" width="36" height="36" rx="9" fill="#fdecee"/><text x="759" y="250" font-size="17" fill="#d91f35">×</text>
+  <text x="746" y="283" class="label muted">ACTIVE BLOCKERS</text><text x="746" y="321" class="kpi mono">4</text><text x="779" y="319" class="small" fill="#d91f35">2 critical</text>
+  <rect x="973" y="226" width="36" height="36" rx="9" fill="#f1edff"/><text x="984" y="250" font-size="17" fill="#7856c7">●</text>
+  <text x="973" y="283" class="label muted">OVERLOADED QA</text><text x="973" y="321" class="kpi mono">2</text><text x="1006" y="319" class="small muted">of 14 QA</text>
+  <rect x="1200" y="226" width="36" height="36" rx="9" fill="#eaf3ff"/><text x="1211" y="250" font-size="17" fill="#3b78c8">◆</text>
+  <text x="1200" y="283" class="label muted">KNOWLEDGE COVERAGE</text><text x="1200" y="321" class="kpi mono">86%</text><text x="1266" y="319" class="small" fill="#2b9154">+3%</text>
+
+  <!-- Main analytics row -->
+  <g filter="url(#shadow)"><rect x="272" y="372" width="714" height="324" rx="12" fill="#fff"/><rect x="1002" y="372" width="406" height="324" rx="12" fill="#fff"/></g>
+  <text x="296" y="407" class="h2">Testing Trend</text><text x="296" y="430" class="small muted">Executed vs passed test cases · 30 days</text>
+  <rect x="835" y="392" width="127" height="32" rx="8" fill="#f7f9fc"/><text x="853" y="413" class="small" font-weight="600">All projects ▾</text>
+  <line x1="312" y1="642" x2="954" y2="642" stroke="#e8ebf1"/><line x1="312" y1="588" x2="954" y2="588" stroke="#eef1f5"/><line x1="312" y1="534" x2="954" y2="534" stroke="#eef1f5"/><line x1="312" y1="480" x2="954" y2="480" stroke="#eef1f5"/>
+  <text x="292" y="646" class="small muted">0</text><text x="286" y="592" class="small muted">50</text><text x="280" y="538" class="small muted">100</text><text x="280" y="484" class="small muted">150</text>
+  <polyline points="312,615 374,590 436,600 498,554 560,566 622,512 684,526 746,487 808,501 870,454 932,466" fill="none" stroke="#d91f35" stroke-width="3"/>
+  <polyline points="312,627 374,608 436,614 498,574 560,582 622,532 684,545 746,506 808,520 870,475 932,486" fill="none" stroke="#3b78c8" stroke-width="3"/>
+  <g fill="#d91f35"><circle cx="312" cy="615" r="4"/><circle cx="498" cy="554" r="4"/><circle cx="684" cy="526" r="4"/><circle cx="870" cy="454" r="4"/></g>
+  <text x="312" y="670" class="small muted">8 Aug</text><text x="507" y="670" class="small muted">15 Aug</text><text x="703" y="670" class="small muted">22 Aug</text><text x="900" y="670" class="small muted">5 Sep</text>
+  <circle cx="711" cy="407" r="4" fill="#d91f35"/><text x="723" y="411" class="small muted">Executed</text><circle cx="784" cy="407" r="4" fill="#3b78c8"/><text x="796" y="411" class="small muted">Passed</text>
+
+  <text x="1026" y="407" class="h2">Workload by QA</text><text x="1026" y="430" class="small muted">Active Jira issues per assignee</text>
+  <text x="1026" y="469" class="body" font-weight="600">Andi P.</text><text x="1360" y="469" class="small muted">18</text><rect x="1026" y="479" width="346" height="9" rx="5" fill="#eef1f5"/><rect x="1026" y="479" width="311" height="9" rx="5" fill="#d91f35"/>
+  <text x="1026" y="519" class="body" font-weight="600">Dewi S.</text><text x="1360" y="519" class="small muted">16</text><rect x="1026" y="529" width="346" height="9" rx="5" fill="#eef1f5"/><rect x="1026" y="529" width="277" height="9" rx="5" fill="#e39b2f"/>
+  <text x="1026" y="569" class="body" font-weight="600">Fajar R.</text><text x="1360" y="569" class="small muted">11</text><rect x="1026" y="579" width="346" height="9" rx="5" fill="#eef1f5"/><rect x="1026" y="579" width="190" height="9" rx="5" fill="#3b78c8"/>
+  <text x="1026" y="619" class="body" font-weight="600">Nadia K.</text><text x="1360" y="619" class="small muted">8</text><rect x="1026" y="629" width="346" height="9" rx="5" fill="#eef1f5"/><rect x="1026" y="629" width="138" height="9" rx="5" fill="#2ca15c"/>
+  <text x="1026" y="668" class="small muted">Threshold overload: &gt;15 active issues</text>
+
+  <!-- Bottom panels -->
+  <g filter="url(#shadow)"><rect x="272" y="720" width="790" height="402" rx="12" fill="#fff"/><rect x="1078" y="720" width="330" height="402" rx="12" fill="#fff"/></g>
+  <text x="296" y="758" class="h2">Projects Needing Attention</text><text x="296" y="781" class="small muted">Prioritized by status, blockers, and testing progress</text>
+  <text x="1005" y="758" class="small" fill="#d91f35" font-weight="600">View all →</text>
+  <rect x="296" y="807" width="742" height="38" rx="6" fill="#f7f9fc"/>
+  <text x="312" y="831" class="label muted">PROJECT</text><text x="548" y="831" class="label muted">STATUS</text><text x="682" y="831" class="label muted">TESTING</text><text x="808" y="831" class="label muted">BLOCKER</text><text x="924" y="831" class="label muted">OWNER</text>
+  <text x="312" y="878" class="body" font-weight="600">Checkout Revamp</text><text x="312" y="896" class="small muted">Web &amp; Mobile</text><rect x="548" y="864" width="75" height="25" rx="13" fill="#fdecee"/><text x="562" y="881" class="small" fill="#c61b30" font-weight="600">Off Track</text><text x="682" y="881" class="body mono" font-weight="600">64%</text><rect x="808" y="864" width="34" height="25" rx="13" fill="#fdecee"/><text x="821" y="881" class="small" fill="#c61b30" font-weight="700">2</text><text x="924" y="881" class="body">Dewi S.</text>
+  <line x1="296" y1="919" x2="1038" y2="919" stroke="#edf0f4"/>
+  <text x="312" y="950" class="body" font-weight="600">Promo Engine V2</text><text x="312" y="968" class="small muted">Backend</text><rect x="548" y="936" width="59" height="25" rx="13" fill="#fff0d9"/><text x="560" y="953" class="small" fill="#b66d08" font-weight="600">At Risk</text><text x="682" y="953" class="body mono" font-weight="600">71%</text><rect x="808" y="936" width="34" height="25" rx="13" fill="#fff0d9"/><text x="821" y="953" class="small" fill="#b66d08" font-weight="700">1</text><text x="924" y="953" class="body">Andi P.</text>
+  <line x1="296" y1="991" x2="1038" y2="991" stroke="#edf0f4"/>
+  <text x="312" y="1022" class="body" font-weight="600">Loyalty Migration</text><text x="312" y="1040" class="small muted">Data</text><rect x="548" y="1008" width="59" height="25" rx="13" fill="#fff0d9"/><text x="560" y="1025" class="small" fill="#b66d08" font-weight="600">At Risk</text><text x="682" y="1025" class="body mono" font-weight="600">82%</text><rect x="808" y="1008" width="34" height="25" rx="13" fill="#e8f7ed"/><text x="821" y="1025" class="small" fill="#237b49" font-weight="700">0</text><text x="924" y="1025" class="body">Fajar R.</text>
+  <line x1="296" y1="1063" x2="1038" y2="1063" stroke="#edf0f4"/>
+  <text x="312" y="1094" class="body" font-weight="600">PDP Optimization</text><rect x="548" y="1080" width="71" height="25" rx="13" fill="#e8f7ed"/><text x="560" y="1097" class="small" fill="#237b49" font-weight="600">On Track</text><text x="682" y="1097" class="body mono" font-weight="600">93%</text><text x="808" y="1097" class="body mono">0</text><text x="924" y="1097" class="body">Nadia K.</text>
+
+  <text x="1102" y="758" class="h2">Source Sync</text><text x="1102" y="781" class="small muted">Data integration health</text>
+  <rect x="1102" y="808" width="282" height="62" rx="9" fill="#f7f9fc"/><circle cx="1125" cy="839" r="7" fill="#2ca15c"/><text x="1144" y="835" class="h3">Jira</text><text x="1144" y="854" class="small muted">Workload · 5m ago</text><text x="1342" y="843" class="small" fill="#237b49" font-weight="600">Live</text>
+  <rect x="1102" y="882" width="282" height="62" rx="9" fill="#f7f9fc"/><circle cx="1125" cy="913" r="7" fill="#2ca15c"/><text x="1144" y="909" class="h3">Qase</text><text x="1144" y="928" class="small muted">Testing · 8m ago</text><text x="1342" y="917" class="small" fill="#237b49" font-weight="600">Live</text>
+  <rect x="1102" y="956" width="282" height="62" rx="9" fill="#f7f9fc"/><circle cx="1125" cy="987" r="7" fill="#e39b2f"/><text x="1144" y="983" class="h3">Solr</text><text x="1144" y="1002" class="small muted">RAG · 42m ago</text><text x="1324" y="991" class="small" fill="#b66d08" font-weight="600">Delayed</text>
+  <rect x="1102" y="1030" width="282" height="62" rx="9" fill="#f7f9fc"/><circle cx="1125" cy="1061" r="7" fill="#3b78c8"/><text x="1144" y="1057" class="h3">Docs</text><text x="1144" y="1076" class="small muted">Manual · today</text><text x="1317" y="1065" class="small" fill="#3b78c8" font-weight="600">Manual</text>
+
+  <text x="272" y="1166" class="small muted">Mock data for design review · Desktop 1440 px · QA Lead view</text>
+</svg>

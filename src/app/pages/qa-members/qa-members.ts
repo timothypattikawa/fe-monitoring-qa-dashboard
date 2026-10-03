@@ -1,8 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DashboardApiService, QaMember, QaMemberInput } from '../../core/dashboard-api.service';
 import { LiveDashboardStore } from '../../core/live-dashboard.store';
+type QaMemberWarnings = { qaseDisplayName?: string; jiraEmail?: string };
 
 @Component({
   selector: 'app-qa-members',
@@ -14,15 +15,26 @@ export class QaMembersPage {
   readonly live = inject(LiveDashboardStore);
 
   readonly members = signal<QaMember[]>([]);
+  readonly memberPage = signal(1);
+  readonly pageSize = 10;
+  readonly memberPageCount = computed(() =>
+    Math.max(1, Math.ceil(this.members().length / this.pageSize)),
+  );
+  readonly currentMemberPage = computed(() => Math.min(this.memberPage(), this.memberPageCount()));
+  readonly pagedMembers = computed(() => {
+    const page = this.currentMemberPage();
+    return this.members().slice((page - 1) * this.pageSize, page * this.pageSize);
+  });
   readonly draft = signal<QaMemberInput>({
     name: '',
-    jiraAccountId: '',
-    qaseMemberId: '',
+    jiraEmail: '',
+    qaseDisplayName: '',
     weeklyCapacityHours: 40,
   });
   readonly editingId = signal<string | null>(null);
   readonly error = signal('');
   readonly saving = signal(false);
+  readonly warnings = signal<QaMemberWarnings | null>(null);
 
   constructor() {
     this.load();
@@ -39,14 +51,15 @@ export class QaMembersPage {
     this.editingId.set(member.id);
     this.draft.set({
       name: member.name,
-      jiraAccountId: member.jiraAccountId,
-      qaseMemberId: member.qaseMemberId,
+      jiraEmail: member.jiraEmail,
+      qaseDisplayName: member.qaseDisplayName,
       weeklyCapacityHours: member.weeklyCapacityHours,
     });
   }
 
   cancelEdit() {
     this.editingId.set(null);
+    this.warnings.set(null);
     this.resetDraft();
   }
 
@@ -56,16 +69,19 @@ export class QaMembersPage {
     const body = this.draft();
     const managerKey = this.live.managerKey();
     this.saving.set(true);
+    this.warnings.set(null);
     const request = id
       ? this.api.updateQaMember(id, body, managerKey)
       : this.api.createQaMember(body, managerKey);
     request.subscribe({
-      next: () => {
+      next: (member) => {
         this.saving.set(false);
         this.editingId.set(null);
         this.resetDraft();
         this.error.set('');
+        this.warnings.set(member.warnings ?? null);
         this.load();
+        this.live.workloadStale.set(true);
       },
       error: (error: HttpErrorResponse) => {
         this.saving.set(false);
@@ -89,6 +105,7 @@ export class QaMembersPage {
       next: () => {
         this.saving.set(false);
         this.load();
+        this.live.workloadStale.set(true);
       },
       error: () => {
         this.saving.set(false);
@@ -98,6 +115,6 @@ export class QaMembersPage {
   }
 
   private resetDraft() {
-    this.draft.set({ name: '', jiraAccountId: '', qaseMemberId: '', weeklyCapacityHours: 40 });
+    this.draft.set({ name: '', jiraEmail: '', qaseDisplayName: '', weeklyCapacityHours: 40 });
   }
 }

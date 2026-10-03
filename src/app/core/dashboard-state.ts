@@ -2,6 +2,8 @@ import { Injectable, computed, signal } from '@angular/core';
 import type { Environment, Project, ProjectHealth, TestRun } from './dashboard.models';
 import type { ApiBug, ApiProject, WorkflowDay, WorkloadData } from './dashboard-api.service';
 
+const WORKLOAD_DAYS = 5;
+
 type DashboardMember = {
   name: string;
   initials: string;
@@ -18,6 +20,20 @@ type DashboardMember = {
   blocker: string;
   jiraProjects: { active: number; total: number };
   qaseExecution: { yearToDate: number; activeProjects: number };
+  portfolio: {
+    id: string;
+    key: string;
+    name: string;
+    status?: string;
+    stagingStartAt?: string;
+  }[];
+  nextProject: { id: string; key: string; name: string; stagingStartAt: string } | null;
+  /** False until the QA lead sets the member's Qase display name (Jira data only until then). */
+  qaseMapped: boolean;
+  /** Name Qase records this QA's runs under — run testers match on it, not on `name`. */
+  qaseName: string;
+  /** Dashboard-registered projects this QA executed in during the workload window (Qase DB). */
+  qaseProjects: { id: string; key: string; name: string; status?: string }[];
   color: string;
 };
 type DashboardDefect = {
@@ -26,6 +42,7 @@ type DashboardDefect = {
   title: string;
   domain: string;
   severity: string;
+  priority: string;
   cause: string;
   age: string;
   status: string;
@@ -66,8 +83,8 @@ export class DashboardState {
       Record<string, { executed: number; passed: number; failed: number; blocked: number }>
     >
   >({});
-  readonly nav = ['Projects', 'Workflow', 'Workload', 'Bugs', 'QA Members'];
-  readonly iconIds = ['projects', 'testing', 'workload', 'bugs', 'qa-members'];
+  readonly nav = ['Projects', 'Workflow', 'Workload', 'Bugs', 'QA Members', 'Documentation', 'Knowledge & RAG'];
+  readonly iconIds = ['projects', 'testing', 'workload', 'bugs', 'qa-members', 'documentation', 'knowledge'];
   get members() {
     return this.memberData();
   }
@@ -114,13 +131,19 @@ export class DashboardState {
   readonly workloadMetric = signal<'Executed' | 'Remaining' | 'Blocked'>('Executed');
   readonly workloadTrendMetric = signal<'Executed' | 'Failed' | 'Blocked'>('Executed');
   readonly workloadEnvironment = signal<'All environments' | Environment>('All environments');
-  readonly bugEnvironment = signal<Environment>('STAGING');
+  readonly bugEnvironment = signal<'All environments' | Environment>('All environments');
+  readonly memberRunPage = signal(1);
+  readonly executionHistoryPage = signal(1);
+  readonly projectRunHistoryPage = signal(1);
+  readonly tablePageSize = 10;
   readonly bugQuery = signal('');
   readonly bugProject = signal('All projects');
   readonly bugReporter = signal('All reporters');
   readonly bugSeverity = signal('All severities');
   readonly bugStatus = signal('All statuses');
   readonly bugPageEnvironment = signal<'All environments' | Environment>('All environments');
+  readonly bugPageSize = 10;
+  readonly bugPage = signal(1);
   readonly feedback = signal('');
   readonly filtered = computed(() =>
     this.projects().filter(
@@ -164,13 +187,18 @@ export class DashboardState {
     return this.testRuns().filter(
       (run) =>
         projectKeys.has(run.key) &&
-        (this.owner() === 'All QA members' || run.owner === this.owner()),
+        (this.owner() === 'All QA members' || run.testers.includes(this.owner())),
     );
   });
-  readonly workloadMembers = computed(() =>
+  /** Every QA (Jira portfolio cards), unmapped ones included. */
+  readonly portfolioMembers = computed(() =>
     this.owner() === 'All QA members'
       ? this.members
       : this.members.filter((member) => member.name === this.owner()),
+  );
+  /** QAs with a Qase mapping — the ones the execution charts and totals are about. */
+  readonly workloadMembers = computed(() =>
+    this.portfolioMembers().filter((member) => member.qaseMapped),
   );
   readonly workloadSummary = computed(() => {
     const series = this.workloadSeries();
@@ -200,6 +228,14 @@ export class DashboardState {
           bug.environment === this.bugPageEnvironment()),
     );
   });
+  readonly bugPageCount = computed(() =>
+    Math.max(1, Math.ceil(this.filteredDefects().length / this.bugPageSize)),
+  );
+  readonly pagedDefects = computed(() => {
+    const page = Math.min(this.bugPage(), this.bugPageCount());
+    const start = (page - 1) * this.bugPageSize;
+    return this.filteredDefects().slice(start, start + this.bugPageSize);
+  });
   readonly bugReporters = computed(() => [...new Set(this.defects.map((bug) => bug.reporter))]);
   readonly bugStatuses = computed(() => [...new Set(this.defects.map((bug) => bug.status))]);
   readonly bugSummary = computed(() => ({
@@ -209,6 +245,13 @@ export class DashboardState {
       .length,
     projects: new Set(this.filteredDefects().map((bug) => bug.init)).size,
   }));
+  readonly highPriorityDefects = computed(() =>
+    this.defects
+      .filter(
+        (bug) => this.isVisible(bug.init) && ['HIGH', 'HIGHEST', 'BLOCKER'].includes(bug.priority),
+      )
+      .sort((a, b) => this.defectPriorityRank(a) - this.defectPriorityRank(b)),
+  );
   readonly workloadChartMax = computed(() =>
     Math.max(1, ...this.workloadMembers().map((member) => this.memberChartValue(member.name))),
   );
@@ -218,9 +261,6 @@ export class DashboardState {
       this.hasLoadedLiveData = true;
       this.resetViewState();
     }
-    const memberNames = new Map(
-      (snapshot.workload?.members ?? []).map((member) => [member.id, member.name]),
-    );
     const bugsByProject = new Map<string, ApiBug[]>();
     for (const bug of snapshot.bugs) {
       bugsByProject.set(bug.projectId, [...(bugsByProject.get(bug.projectId) ?? []), bug]);
@@ -229,7 +269,7 @@ export class DashboardState {
       snapshot.projects.map((project) => [project.id, project.jiraInitKey]),
     );
     const projects = snapshot.projects.map((project) =>
-      this.mapProject(project, bugsByProject.get(project.id) ?? [], memberNames),
+      this.mapProject(project, bugsByProject.get(project.id) ?? []),
     );
     this.projects.set(projects);
 
@@ -253,7 +293,20 @@ export class DashboardState {
       ),
     ]);
 
-    const members = snapshot.workload?.members ?? [];
+    // Workload charts cover a fixed window: today plus the previous
+    // WORKLOAD_DAYS - 1 calendar days (it slides forward each day; days without
+    // execution stay as empty columns).
+    const windowDates = Array.from({ length: WORKLOAD_DAYS }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (WORKLOAD_DAYS - 1 - i));
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    });
+    const inWindow = new Set(windowDates);
+    const members = (snapshot.workload?.members ?? []).map((m) => ({
+      ...m,
+      dailyExecutions: m.dailyExecutions.filter((d) => inWindow.has(d.date.slice(0, 10))),
+    }));
     const workloadSeries: Record<
       string,
       Record<string, { executed: number; passed: number; failed: number; blocked: number }>
@@ -263,7 +316,7 @@ export class DashboardState {
         workloadSeries[member.name] = Object.fromEntries(
           member.dailyExecutions.map((day) => [this.dateLabel(day.date), day]),
         );
-        const owned = projects.filter((project) => project.qa === member.name);
+        const portfolio = member.projects ?? [];
         return {
           name: member.name,
           initials: this.initials(member.name),
@@ -273,26 +326,27 @@ export class DashboardState {
           scenarios: 0,
           execution: member.qaseExecutions,
           docs: 0,
-          project: owned[0] ? `${owned[0].key} · ${owned[0].name}` : '—',
+          project: portfolio[0] ? `${portfolio[0].key} · ${portfolio[0].name}` : '—',
           dailyTarget: 0,
           cumulative: 0,
           dailyRuns: member.dailyExecutions.length,
           blocker: '',
-          jiraProjects: { active: owned.length, total: owned.length },
+          jiraProjects: {
+            active: member.activeProjects ?? portfolio.length,
+            total: member.totalProjects ?? portfolio.length,
+          },
           qaseExecution: { yearToDate: 0, activeProjects: member.qaseExecutions },
+          portfolio,
+          nextProject: member.nextProject ?? null,
+          qaseMapped: member.qaseMapped ?? true,
+          qaseName: member.qaseName || member.name,
+          qaseProjects: member.qaseProjects ?? [],
           color: ['green-avatar', 'blue', 'orange'][index % 3],
         };
       }),
     );
     this.workloadSeries.set(workloadSeries);
-    this.workloadDateData.set([
-      ...new Set(
-        members
-          .flatMap((member) => member.dailyExecutions.map((day) => day.date))
-          .sort()
-          .map((date) => this.dateLabel(date)),
-      ),
-    ]);
+    this.workloadDateData.set(windowDates.map((date) => this.dateLabel(date)));
 
     this.defectData.set(
       snapshot.bugs.map((bug) => ({
@@ -301,20 +355,24 @@ export class DashboardState {
         title: bug.summary,
         domain: '—',
         severity: this.severity(bug.severity),
+        priority: bug.severity?.trim().toUpperCase() || '—',
         cause: '—',
-        age: '—',
+        age: this.ageLabel(bug.createdAt),
         status: bug.status,
-        environment: '—',
+        environment: (bug.environment?.toUpperCase() || '—') as Environment | '—',
         reporter: bug.reporter || bug.creator || '—',
         owner: bug.assignee || '—',
       })),
     );
   }
-  private mapProject(
-    project: ApiProject,
-    bugs: ApiBug[],
-    memberNames: Map<string, string>,
-  ): Project {
+  private ageLabel(createdAt: string | null) {
+    if (!createdAt) return '—';
+    const hours = Math.max(0, (Date.now() - new Date(createdAt).getTime()) / 3_600_000);
+    if (hours < 24) return `${Math.round(hours)}hr`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ${Math.round(hours - days * 24)}hr`;
+  }
+  private mapProject(project: ApiProject, bugs: ApiBug[]): Project {
     const testRuns = (project.runs ?? []).flatMap((run) => {
       const environment = run.environment.toUpperCase();
       if (environment !== 'STAGING' && environment !== 'BETA') return [];
@@ -324,7 +382,7 @@ export class DashboardState {
           date: (run.finishedAt ?? run.startedAt ?? '').slice(0, 10),
           environment: environment as Environment,
           scope: run.scope || run.platform || run.title || '—',
-          owner: (memberNames.get(run.ownerId) ?? project.qaOwner) || '—',
+          testers: run.testers ?? [],
           passed: run.passed,
           failed: run.failed,
           blocked: run.blocked,
@@ -333,27 +391,53 @@ export class DashboardState {
         },
       ];
     });
-    const stats = (environment: Environment) =>
-      testRuns
-        .filter((run) => run.environment === environment)
-        .reduce(
-          (sum, run) => ({
-            executed: sum.executed + run.passed + run.failed,
-            total: sum.total + run.total,
-          }),
-          { executed: 0, total: 0 },
-        );
-    const staging = stats('STAGING');
-    const beta = stats('BETA');
-    const critical = bugs.filter((bug) => this.severity(bug.severity) === 'Critical').length;
+    // stagingCounts/betaCounts come from the backend already deduped by
+    // case ID across runs — a shared scenario tested on both IOS and
+    // Android must count once, not once per run, or the percentage can
+    // exceed 100%. Every staging/beta % on this page (inside the project
+    // detail dialog and outside on the list card) must read from here, not
+    // recompute its own sum over testRuns.
+    const stagingCounts = project.stagingCounts ?? { passed: 0, failed: 0, blocked: 0, total: 0 };
+    const betaCounts = project.betaCounts ?? { passed: 0, failed: 0, blocked: 0, total: 0 };
+    const critical = bugs.filter(
+      (bug) => this.severity(bug.severity) === 'Critical' && this.isOpenStatus(bug.status),
+    ).length;
+    const stagingBugs =
+      project.bugSummary?.staging ??
+      bugs.filter((bug) => bug.environment?.toUpperCase() === 'STAGING').length;
+    const betaBugs =
+      project.bugSummary?.beta ??
+      bugs.filter((bug) => bug.environment?.toUpperCase() === 'BETA').length;
+    const stagingStart = this.dateOnly(project.stagingStartAt);
+    const stagingEnd = this.dateOnly(project.stagingEndAt);
+    const betaStart = this.dateOnly(project.betaStartAt);
+    const betaEnd = this.dateOnly(project.betaEndAt);
+    const stagingPercent = this.executionPercent(
+      stagingCounts.passed,
+      stagingCounts.failed,
+      stagingCounts.total,
+    );
+    const betaPercent = this.executionPercent(
+      betaCounts.passed,
+      betaCounts.failed,
+      betaCounts.total,
+    );
+    const stagingDaysLeft = this.daysUntil(project.stagingEndAt);
+    const betaDaysLeft = this.daysUntil(project.betaEndAt);
+    const velocity = this.velocityFor(stagingPercent, stagingStart);
+    const betaVelocity = this.velocityFor(betaPercent, betaStart);
     return {
+      id: project.id,
       key: project.jiraInitKey,
       name: project.name,
       qa: project.qaOwner || '—',
-      stagingStart: this.dateOnly(project.stagingStartAt),
-      stagingEnd: this.dateOnly(project.stagingEndAt),
-      betaStart: this.dateOnly(project.betaStartAt),
-      betaEnd: this.dateOnly(project.betaEndAt),
+      size: project.projectSize || '—',
+      stagingMtttMinutes: project.stagingMtttMinutes ?? null,
+      betaMtttMinutes: project.betaMtttMinutes ?? null,
+      stagingStart,
+      stagingEnd,
+      betaStart,
+      betaEnd,
       status: this.status(project.health),
       passed: project.counts?.passed ?? 0,
       failed: project.counts?.failed ?? 0,
@@ -361,34 +445,77 @@ export class DashboardState {
       total: project.countsAvailable ? project.counts.total : 0,
       fresh: 0,
       indexed: 0,
-      bugs: bugs.length,
+      bugs: project.bugSummary?.total ?? bugs.length,
       critical,
       code: project.qaseProjectCode,
-      domain: '—',
-      sprint: '—',
-      size: '—',
-      version: `Qase run #${project.qaseTestRunId}`,
-      staging: this.percent(staging.executed, staging.total),
-      beta: this.percent(beta.executed, beta.total),
-      velocity: 0,
-      requiredVelocity: 0,
-      stagingEta: '',
-      stagingDaysLeft: this.daysUntil(project.stagingEndAt),
-      betaEta: '',
-      betaDaysLeft: this.daysUntil(project.betaEndAt),
-      stagingBugs: 0,
-      betaBugs: 0,
-      canceledBugs: bugs.filter((bug) => bug.status.toLowerCase().includes('cancel')).length,
-      escapedBugs: 0,
+      domain: this.domainFor(stagingStart, stagingEnd, betaStart, betaEnd),
+      version: `${project.runs?.length ?? 0} active run(s)`,
+      staging: stagingPercent,
+      beta: betaPercent,
+      velocity,
+      requiredVelocity: this.requiredVelocityFor(stagingPercent, stagingDaysLeft),
+      stagingEta: this.etaFor(stagingPercent, velocity, stagingEnd),
+      stagingDaysLeft,
+      betaVelocity,
+      betaRequiredVelocity: this.requiredVelocityFor(betaPercent, betaDaysLeft),
+      betaEta: this.etaFor(betaPercent, betaVelocity, betaEnd),
+      betaDaysLeft,
+      stagingBugs,
+      betaBugs,
+      canceledBugs:
+        project.bugSummary?.canceled ??
+        bugs.filter((bug) => bug.status.toLowerCase().includes('cancel')).length,
+      betaBugThresholdExceeded:
+        project.bugSummary?.betaOverThirtyPercentOfStaging ?? betaBugs > stagingBugs * 0.3,
+      // A defect found in BETA escaped the preceding STAGING validation.
+      escapedBugs: betaBugs,
       docsReady: 0,
-      testCaseAuthors: [],
+      testCaseAuthors: (project.testerProgress ?? []).map((tester) => ({
+        name: tester.name,
+        count: tester.total,
+      })),
       testRuns,
+      dailyExecutions: (() => {
+        const rows = project.dailyExecutions ?? [];
+        return rows
+          .filter((day) => day.tester)
+          .map((day) => ({
+            date: day.date,
+            dateLabel: this.dateLabel(day.date),
+            tester: day.tester,
+            environment: day.environment as Environment,
+            executed: day.executed,
+            passed: day.passed,
+            failed: day.failed,
+            blocked: day.blocked,
+            skipped: day.skipped,
+            retest: day.retest,
+            inProgress: day.inProgress,
+            invalid: day.invalid,
+            cancelled: day.cancelled,
+          }));
+      })(),
+      stagingCounts,
+      betaCounts,
+      assigneeProgress: (project.assigneeProgress ?? []).flatMap((progress) => {
+        const environment = progress.environment.toUpperCase();
+        return environment === 'STAGING' || environment === 'BETA'
+          ? [{ ...progress, environment: environment as Environment }]
+          : [];
+      }),
     };
+  }
+  useProjectDetail(project: ApiProject) {
+    const mapped = this.mapProject(project, []);
+    this.projects.update((projects) =>
+      projects.map((item) => (item.id === mapped.id ? mapped : item)),
+    );
+    this.selected.set(mapped);
   }
   private dateOnly(value: string) {
     return value ? value.slice(0, 10) : '';
   }
-  private dateLabel(value: string) {
+  dateLabel(value: string) {
     if (!value) return '—';
     const parts = new Intl.DateTimeFormat('en-US', {
       day: '2-digit',
@@ -401,7 +528,55 @@ export class DashboardState {
     if (!value) return 0;
     return Math.ceil((new Date(value).getTime() - Date.now()) / 86_400_000);
   }
-  private severity(value: string) {
+  // Average pace since the environment started: percent complete / days
+  // elapsed. Needs a start date and > 0% progress — otherwise there's
+  // nothing to project a pace from.
+  private velocityFor(percent: number, startDate: string): number {
+    if (!startDate || percent <= 0) return 0;
+    const elapsedDays = Math.max(
+      1,
+      Math.floor((Date.now() - new Date(startDate).getTime()) / 86_400_000),
+    );
+    return percent / elapsedDays;
+  }
+  // Pace still needed to reach 100% by the environment's end date.
+  private requiredVelocityFor(percent: number, daysLeft: number): number {
+    if (daysLeft <= 0) return 0;
+    return Math.max(0, 100 - percent) / daysLeft;
+  }
+  // Projects a completion date from the current pace; falls back to the
+  // environment's own end date when there's no pace yet to project from.
+  private etaFor(percent: number, velocity: number, endDate: string): string {
+    if (percent >= 100) return 'Done';
+    if (velocity <= 0) return endDate ? this.dateLabel(endDate) : '—';
+    const daysNeeded = Math.ceil((100 - percent) / velocity);
+    return this.dateLabel(new Date(Date.now() + daysNeeded * 86_400_000).toISOString());
+  }
+  // ISO yyyy-mm-dd strings compare lexicographically same as chronologically.
+  private domainFor(stagingStart: string, stagingEnd: string, betaStart: string, betaEnd: string) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (stagingStart && stagingEnd && today >= stagingStart && today <= stagingEnd)
+      return 'Staging';
+    if (betaStart && betaEnd && today >= betaStart && today <= betaEnd) return 'Beta';
+    return '—';
+  }
+  priorityTone(value: string) {
+    const v = (value ?? '').toLowerCase();
+    if (v.includes('critical') || v.includes('blocker')) return 'critical';
+    return ['highest', 'high', 'medium'].includes(v) ? v : 'none';
+  }
+  statusTone(value: string) {
+    const v = (value ?? '').toLowerCase().trim();
+    if (v === 'open' || v === 'to do') return 'open';
+    if (v === 'reopened') return 'reopened';
+    if (v === 'confirm') return 'confirm';
+    if (v === 'in progress') return 'progress';
+    if (v === 'ready for qa') return 'qa';
+    if (v === 'resolved' || v === 'done' || v === 'closed') return 'done';
+    if (['invalid', 'cancel', 'cancelled', 'canceled'].includes(v)) return 'invalid';
+    return 'other';
+  }
+  severity(value: string) {
     const severity = value.toLowerCase();
     if (severity.includes('critical') || severity.includes('blocker') || severity === 'highest')
       return 'Critical';
@@ -413,8 +588,10 @@ export class DashboardState {
     const value = health.toLowerCase().replaceAll('_', ' ');
     if (value.includes('behind') || value.includes('off track')) return 'Off track';
     if (value.includes('risk')) return 'At risk';
-    if (value.includes('track') || value === 'healthy') return 'On track';
-    return 'Draft';
+    // Any other backend value (including its "unknown" default) is treated
+    // as on-track — "Draft"/"No Target Set" is decided from the project's
+    // own staging/beta dates in projectHealth(), not from this string.
+    return 'On track';
   }
   private resetViewState() {
     this.query.set('');
@@ -441,7 +618,7 @@ export class DashboardState {
       Testing: 'Latest execution results and active Qase runs across projects.',
       Bugs: 'Defect health by project, severity, reporter, and assignee.',
       'QA Members': 'Roster of QA members used to populate the QA owner field.',
-      'Knowledge RAG': 'Indexed QA knowledge, freshness, and source coverage.',
+      'Knowledge & RAG': 'Indexed QA knowledge, freshness, and source coverage.',
       Documentation: 'Release-document readiness by project and document type.',
       Notifications: 'Prepared follow-ups and simulated delivery history.',
     };
@@ -450,59 +627,123 @@ export class DashboardState {
   percent(part: number, total: number) {
     return total ? Math.round((part / total) * 100) : 0;
   }
+  executionPercent(passed: number, failed: number, total: number) {
+    return total ? Math.min(100, this.percent(passed + failed, total)) : 0;
+  }
   formatNumber(value: number) {
     return value.toLocaleString('en-US');
   }
   projectRuns(project: Project, environment: TestRun['environment']) {
     return project.testRuns.filter((run) => run.environment === environment);
   }
-  projectHealth(project: Project): ProjectHealth {
-    if (project.status === 'Draft') return 'No Target Set';
+  // The Jira "health" field alone, with no pace math — the shared base that
+  // both the per-project and per-environment health below build on.
+  private jiraHealth(project: Project): ProjectHealth {
+    if (!project.stagingStart && !project.betaStart) return 'No Target Set';
     if (project.status === 'Off track') return 'Behind';
     return project.status === 'At risk' ? 'At Risk' : 'On Track';
+  }
+  // Rolls up both environments' pace so the project-card/list badge (Projects,
+  // Workflow pages) can't stay "On Track" while Staging or Beta is behind pace.
+  projectHealth(project: Project): ProjectHealth {
+    const base = this.jiraHealth(project);
+    if (base === 'Behind' || base === 'No Target Set') return base;
+    const envHealth = [
+      this.environmentHealth(project, 'STAGING'),
+      this.environmentHealth(project, 'BETA'),
+    ];
+    if (envHealth.includes('Behind')) return 'Behind';
+    if (envHealth.includes('At Risk')) return 'At Risk';
+    return base;
   }
   environmentHealth(project: Project, environment: Environment): ProjectHealth {
     const progress = environment === 'STAGING' ? project.staging : project.beta;
     const target = environment === 'STAGING' ? project.stagingEnd : project.betaEnd;
     if (!target) return 'No Target Set';
     if (!progress) return 'Stalled';
-    return this.projectHealth(project);
+    const daysLeft = environment === 'STAGING' ? project.stagingDaysLeft : project.betaDaysLeft;
+    if (daysLeft <= 0 && progress < 100) return 'Behind';
+    const base = this.jiraHealth(project);
+    if (base === 'Behind') return base;
+    const velocity = environment === 'STAGING' ? project.velocity : project.betaVelocity;
+    const requiredVelocity =
+      environment === 'STAGING' ? project.requiredVelocity : project.betaRequiredVelocity;
+    // Jira's own health field can lag reality — flag it ourselves once the
+    // current pace can no longer reach 100% by the deadline.
+    if (velocity < requiredVelocity) return 'At Risk';
+    return base;
   }
   projectStatusCount(status: ProjectHealth) {
     return this.filtered().filter((project) => this.projectHealth(project) === status).length;
   }
   environmentStats(project: Project, environment: Environment) {
-    const runs = this.projectRuns(project, environment);
-    const passed = runs.reduce((total, run) => total + run.passed, 0);
-    const failed = runs.reduce((total, run) => total + run.failed, 0);
-    const blocked = runs.reduce((total, run) => total + run.blocked, 0);
+    const counts = environment === 'STAGING' ? project.stagingCounts : project.betaCounts;
     return {
-      passed,
-      failed,
-      blocked,
-      notRun: Math.max(0, project.total - passed - failed - blocked),
+      passed: counts.passed,
+      failed: counts.failed,
+      blocked: counts.blocked,
+      total: counts.total,
+      notRun: Math.max(0, counts.total - counts.passed - counts.failed - counts.blocked),
     };
   }
-  environmentMttt(project: Project, environment: Environment) {
-    return this.projectRuns(project, environment)[0]?.elapsed ?? '—';
+  environmentDistribution(project: Project, environment: Environment) {
+    const counts = this.environmentStats(project, environment);
+    const passed = this.percent(counts.passed, counts.total);
+    const failed = Math.min(100, passed + this.percent(counts.failed, counts.total));
+    const blocked = Math.min(100, failed + this.percent(counts.blocked, counts.total));
+    return `conic-gradient(#087a5b 0 ${passed}%, #c9222d ${passed}% ${failed}%, #d98a00 ${failed}% ${blocked}%, #e5e8ee ${blocked}% 100%)`;
   }
-  memberRuns(name: string, project?: Project) {
+  betaBugThreshold(project: Project) {
+    return project.betaBugThresholdExceeded;
+  }
+  environmentMttt(project: Project, environment: Environment) {
+    const minutes =
+      environment === 'STAGING' ? project.stagingMtttMinutes : project.betaMtttMinutes;
+    if (minutes === null) return '—';
+    const hours = Math.floor(minutes / 60);
+    const remainder = minutes % 60;
+    return hours ? `${hours}h${remainder ? ` ${remainder}m` : ''}` : `${remainder}m`;
+  }
+  environmentRunCount(project: Project, environment: Environment) {
+    return project.testRuns.filter((run) => run.environment === environment).length;
+  }
+  assigneeProgress(project: Project, environment: Environment) {
+    return project.assigneeProgress.filter((progress) => progress.environment === environment);
+  }
+  memberRuns(name: string, project?: Project, environment?: Environment) {
     const runs = project
       ? project.testRuns.map((run) => ({ ...run, key: project.key, projectName: project.name }))
       : this.testRuns();
-    return runs.filter((run) => run.owner === name);
+    const tester = this.members.find((member) => member.name === name)?.qaseName ?? name;
+    return runs.filter(
+      (run) => run.testers.includes(tester) && (!environment || run.environment === environment),
+    );
   }
+  /** Registered-project Qase runs for a QA inside the workload window (what the QA detail lists). */
+  memberWindowRuns(name: string) {
+    const days = new Set(this.workloadDates);
+    return this.memberRuns(name).filter((run) => days.has(this.dateLabel(run.date)));
+  }
+  memberRunPageCount(name: string) {
+    return this.tablePageCount(this.memberWindowRuns(name).length);
+  }
+  pagedMemberRuns(name: string) {
+    return this.tablePage(this.memberWindowRuns(name), this.memberRunPage());
+  }
+  /** Card project chips: active Jira portfolio + Qase-registered projects, merged by INIT key. */
   memberActiveProjects(name: string) {
-    return [
-      ...new Map(
-        this.workloadRuns()
-          .filter((run) => run.owner === name)
-          .map((run) => [run.key, run.projectName]),
-      ).entries(),
-    ];
+    const member = this.members.find((m) => m.name === name);
+    if (!member) return [];
+    const merged = new Map<string, { id: string; key: string; name: string; status?: string }>();
+    for (const project of [...member.portfolio, ...member.qaseProjects]) {
+      const known = merged.get(project.key);
+      // Same INIT in both sources: keep one chip, preferring the Jira status.
+      merged.set(project.key, known ? { ...project, ...known, status: known.status ?? project.status } : project);
+    }
+    return [...merged.values()];
   }
-  memberExecution(name: string, project?: Project) {
-    const runs = this.memberRuns(name, project);
+  memberExecution(name: string, project?: Project, environment?: Environment) {
+    const runs = this.memberRuns(name, project, environment);
     const passed = runs.reduce((sum, run) => sum + run.passed, 0);
     const failed = runs.reduce((sum, run) => sum + run.failed, 0);
     const blocked = runs.reduce((sum, run) => sum + run.blocked, 0);
@@ -524,18 +765,14 @@ export class DashboardState {
     const failed = days.reduce((sum, day) => sum + day.failed, 0);
     const blocked = days.reduce((sum, day) => sum + day.blocked, 0);
     return {
-      runs: days.length,
+      runs: this.memberWindowRuns(name).length,
       passed,
       failed,
       blocked,
       executed: passed + failed,
       notRun: 0,
       total: passed + failed + blocked,
-      projects: new Set(
-        this.workloadRuns()
-          .filter((run) => run.owner === name)
-          .map((run) => run.key),
-      ).size,
+      projects: this.members.find((m) => m.name === name)?.qaseProjects.length ?? 0,
     };
   }
   memberChartValue(name: string) {
@@ -544,16 +781,98 @@ export class DashboardState {
     if (this.workloadMetric() === 'Blocked') return activity.blocked;
     return activity.executed;
   }
+  sortedExecutionHistory(project: Project) {
+    return [...project.dailyExecutions].sort((a, b) => b.date.localeCompare(a.date));
+  }
+  executionHistoryPageCount(project: Project) {
+    return this.tablePageCount(this.sortedExecutionHistory(project).length);
+  }
+  pagedExecutionHistory(project: Project) {
+    return this.tablePage(this.sortedExecutionHistory(project), this.executionHistoryPage());
+  }
+  projectRunHistoryPageCount(project: Project) {
+    return this.tablePageCount(project.testRuns.length);
+  }
+  pagedProjectRunHistory(project: Project) {
+    return this.tablePage(project.testRuns, this.projectRunHistoryPage());
+  }
+  private tablePageCount(total: number) {
+    return Math.max(1, Math.ceil(total / this.tablePageSize));
+  }
+  private tablePage<T>(rows: T[], requestedPage: number) {
+    const page = Math.min(requestedPage, this.tablePageCount(rows.length));
+    return rows.slice((page - 1) * this.tablePageSize, page * this.tablePageSize);
+  }
+  executionHistoryTesterColor(project: Project, tester: string) {
+    const names = [...new Set(project.dailyExecutions.map((day) => day.tester))].sort();
+    const index = names.indexOf(tester);
+    return this.seriesColors[Math.max(0, index) % this.seriesColors.length];
+  }
+  projectChartDates(project: Project) {
+    return [...new Set(project.dailyExecutions.map((day) => day.date))];
+  }
   projectChartValue(project: Project, member: string, dayIndex: number) {
-    return 0;
+    const date = this.projectChartDates(project)[dayIndex];
+    return project.dailyExecutions
+      .filter((day) => day.date === date && day.tester === member)
+      .reduce((sum, day) => sum + day.executed, 0);
   }
   projectChartMax(project: Project) {
     return Math.max(
       1,
       ...this.projectAssignees(project).flatMap((member) =>
-        this.chartDates.map((_, dayIndex) => this.projectChartValue(project, member, dayIndex)),
+        this.projectChartDates(project).map((_, dayIndex) =>
+          this.projectChartValue(project, member, dayIndex),
+        ),
       ),
     );
+  }
+  /**
+   * Every QA's recorded activity on one chart day, for the day-breakdown popup:
+   * only QAs with activity that day, most executed first, each with their share
+   * of the day's executed total. Follows the same environment rule as the bars.
+   */
+  workloadDayBreakdown(dayIndex: number) {
+    const label = this.workloadDates[dayIndex] ?? '';
+    const members = this.workloadMembers();
+    const series = this.workloadSeries();
+    const visible = this.workloadEnvironment() === 'All environments';
+    const rows = members
+      .map((member, index) => {
+        const day = visible ? series[member.name]?.[label] : undefined;
+        return {
+          name: member.name,
+          initials: member.initials,
+          color: this.seriesColors[index % this.seriesColors.length],
+          executed: day?.executed ?? 0,
+          passed: day?.passed ?? 0,
+          failed: day?.failed ?? 0,
+          blocked: day?.blocked ?? 0,
+        };
+      })
+      .filter((row) => row.executed + row.passed + row.failed + row.blocked > 0)
+      .sort((a, b) => b.executed - a.executed || a.name.localeCompare(b.name));
+    const sum = (key: 'executed' | 'passed' | 'failed' | 'blocked') =>
+      rows.reduce((total, row) => total + row[key], 0);
+    const totals = {
+      executed: sum('executed'),
+      passed: sum('passed'),
+      failed: sum('failed'),
+      blocked: sum('blocked'),
+    };
+    return {
+      date: label,
+      totals,
+      quiet: members.length - rows.length,
+      rows: rows.map((row) => ({
+        ...row,
+        share: this.percent(row.executed, totals.executed),
+        // Result mix as % of this QA's own recorded results (passed + failed + blocked).
+        mixPassed: this.percent(row.passed, row.passed + row.failed + row.blocked),
+        mixFailed: this.percent(row.failed, row.passed + row.failed + row.blocked),
+        mixBlocked: this.percent(row.blocked, row.passed + row.failed + row.blocked),
+      })),
+    };
   }
   workloadTrendValue(name: string, dayIndex: number) {
     if (this.workloadEnvironment() !== 'All environments') return 0;
@@ -590,47 +909,59 @@ export class DashboardState {
   workloadPressure(name: string) {
     return { label: 'Unavailable', level: 'watch', note: 'Daily target unavailable' };
   }
-  readonly capacityFactors = [0.62, 0.74, 0.8, 0.88, 0.7, 0.95, 0.85, 1.05, 0.92, 1];
-  memberCapacity(name: string) {
-    const member = this.members.find((item) => item.name === name);
-    if (!member) return { allocated: 0, capacity: 0, utilization: 0, status: 'Unknown' as const };
-    const utilization = this.percent(member.hours, member.capacity);
-    const status =
-      member.capacity === 0
-        ? member.hours > 0
-          ? ('Capacity Unavailable' as const)
-          : ('Unknown' as const)
-        : utilization > 100
-          ? ('Overloaded' as const)
-          : ('Within Capacity' as const);
-    return { allocated: member.hours, capacity: member.capacity, utilization, status };
+  // Planned hours/capacity aren't wired to a real data source yet (always 0),
+  // so this reads the QA's actual recorded Qase execution instead.
+  memberDailyExecuted(name: string, dayIndex: number) {
+    return this.workloadSeries()[name]?.[this.workloadDates[dayIndex]]?.executed ?? 0;
   }
-  capacityTrendValue(name: string, dayIndex: number) {
-    return 0;
+  memberExecutedTotal(name: string) {
+    return this.workloadDates.reduce((sum, _, i) => sum + this.memberDailyExecuted(name, i), 0);
   }
-  teamUtilizationSummary() {
+  memberActiveDays(name: string) {
+    return this.workloadDates.filter((_, i) => this.memberDailyExecuted(name, i) > 0).length;
+  }
+  memberExecutionShare(name: string) {
+    const grandTotal = this.workloadMembers().reduce(
+      (sum, m) => sum + this.memberExecutedTotal(m.name),
+      0,
+    );
+    return this.percent(this.memberExecutedTotal(name), grandTotal);
+  }
+  executionSharePressure(name: string) {
+    const memberCount = this.workloadMembers().length;
+    const evenShare = memberCount ? 100 / memberCount : 0;
+    const share = this.memberExecutionShare(name);
+    if (share >= evenShare * 1.5) return { level: 'high', label: 'High share' };
+    if (share <= evenShare * 0.5) return { level: 'watch', label: 'Low share' };
+    return { level: 'steady', label: 'Balanced' };
+  }
+  executionShareSummary() {
     const members = this.workloadMembers();
-    const utilizations = members.map((m) => this.memberCapacity(m.name).utilization);
-    const average = utilizations.length
-      ? Math.round(utilizations.reduce((sum, v) => sum + v, 0) / utilizations.length)
+    const activeDays = members.map((m) => this.memberActiveDays(m.name));
+    const average = activeDays.length
+      ? Math.round((activeDays.reduce((sum, v) => sum + v, 0) / activeDays.length) * 10) / 10
       : 0;
-    const overloaded = members.filter(
-      (m) => this.memberCapacity(m.name).status === 'Overloaded',
-    ).length;
-    return { average, overloaded };
+    const fullyActive = activeDays.filter((d) => d === this.workloadDates.length).length;
+    return { average, fullyActive };
   }
-  capacityTrendPoints(name: string) {
-    const max = 150;
+  executionSharePoints(name: string) {
     if (!this.workloadDates.length) return '';
+    const max = Math.max(1, ...this.workloadDates.map((_, i) => this.memberDailyExecuted(name, i)));
     const stepX = this.workloadDates.length === 1 ? 0 : 100 / (this.workloadDates.length - 1);
     const points = this.workloadDates.map((_, i) => {
-      const value = Math.min(max, this.capacityTrendValue(name, i));
+      const value = this.memberDailyExecuted(name, i);
       return `${Math.round(i * stepX)},${Math.round(32 - (value / max) * 32)}`;
     });
     return points.length === 1 ? `${points[0]} 100,${points[0].split(',')[1]}` : points.join(' ');
   }
-  projectAssignees(project: Project) {
-    return [...new Set(project.testRuns.map((run) => run.owner))];
+  projectAssignees(project: Project, environment?: Environment) {
+    return [
+      ...new Set(
+        project.testRuns
+          .filter((run) => !environment || run.environment === environment)
+          .flatMap((run) => run.testers),
+      ),
+    ];
   }
   initials(name: string) {
     return name
@@ -641,9 +972,33 @@ export class DashboardState {
       .toUpperCase();
   }
   projectDefects(projectKey: string, environment = this.bugEnvironment()) {
-    return this.defects.filter(
-      (defect) => defect.init === projectKey && defect.environment === environment,
+    return this.defects
+      .filter(
+        (defect) =>
+          defect.init === projectKey &&
+          (environment === 'All environments' || defect.environment === environment),
+      )
+      .sort((a, b) => this.defectPriorityRank(a) - this.defectPriorityRank(b));
+  }
+  isOpenStatus(status: string) {
+    return !['closed', 'resolved', 'done', 'cancelled', 'canceled', 'invalid', 'rejected'].some(
+      (value) => status.toLowerCase().includes(value),
     );
+  }
+  // Open bugs surface first; within each status tier, highest priority
+  // (severity bucket) surfaces first. Jira/Qase's existing updated order is
+  // retained inside each tier because modern Array#sort is stable.
+  private defectPriorityRank(bug: DashboardDefect) {
+    const statusTier = this.isOpenStatus(bug.status) ? 0 : 1;
+    const severityTier =
+      bug.severity === 'Critical'
+        ? 0
+        : bug.severity === 'Major'
+          ? 1
+          : bug.severity === 'Minor'
+            ? 2
+            : 3;
+    return statusTier * 10 + severityTier;
   }
   defectReporters(projectKey: string, environment = this.bugEnvironment()) {
     return [...new Set(this.projectDefects(projectKey, environment).map((bug) => bug.reporter))];
@@ -652,6 +1007,13 @@ export class DashboardState {
     return this.projectDefects(projectKey, environment).filter(
       (defect) => defect.reporter === reporter,
     );
+  }
+  reporterStatusCounts(projectKey: string, reporter: string, environment = this.bugEnvironment()) {
+    const counts = new Map<string, number>();
+    for (const bug of this.reporterDefects(projectKey, reporter, environment)) {
+      counts.set(bug.status, (counts.get(bug.status) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([status, count]) => ({ status, count }));
   }
   timeRemaining(days: number) {
     return days < 0 ? `${-days}d overdue` : `${days}d left`;
@@ -707,6 +1069,7 @@ export class DashboardState {
     this.bugSeverity.set('All severities');
     this.bugStatus.set('All statuses');
     this.bugPageEnvironment.set('All environments');
+    this.bugPage.set(1);
   }
   timelineForecast(project: Project) {
     if (!project.total || !project.requiredVelocity) return 0;
@@ -733,10 +1096,13 @@ export class DashboardState {
   }
   openMember(member: (typeof this.members)[number]) {
     this.selectedMember.set(member);
+    this.memberRunPage.set(1);
   }
   openProject(p: Project) {
     this.selected.set(p);
     this.detailTab.set('Testing');
-    this.bugEnvironment.set('STAGING');
+    this.bugEnvironment.set('All environments');
+    this.executionHistoryPage.set(1);
+    this.projectRunHistoryPage.set(1);
   }
 }

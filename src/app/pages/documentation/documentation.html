@@ -1,0 +1,61 @@
+<section class="panel" aria-labelledby="documentation-title">
+  <div class="panel-heading">
+    <div><h2 id="documentation-title">QA Documentation Tracking</h2><p>Release documentation by project, owner, type, and approval status.</p></div>
+    <button class="primary" (click)="newDocument()">Add New Document</button>
+  </div>
+  <div class="form-grid panel-form filter-grid">
+    <label class="full">Search project<input [(ngModel)]="search" placeholder="INIT key or project name" /></label>
+  </div>
+  <div class="doc-legend" aria-label="Status legend">
+    @for (status of statuses; track status) { <span class="doc-pill" [attr.data-status]="status">{{ status }}</span> }
+    <span class="doc-pill" data-status="Missing">Missing</span>
+  </div>
+  @if (error()) { <p class="live-alert panel-form" role="alert">{{ error() }}</p> }
+  <div class="table-scroll docs-table-scroll">
+    <table class="doc-matrix">
+      <thead><tr><th>ACTIVE QA INITIATIVE</th>@for (type of documentTypes; track type) { <th>{{ type }}</th> }</tr></thead>
+      <tbody>
+        @for (project of matrixProjects(); track project.id) {
+          <tr>
+            <td><strong>{{ project.jiraInitKey }}</strong><small>{{ project.name }}</small></td>
+            @for (type of documentTypes; track type) {
+              @let doc = docFor(project.id, type);
+              <td>
+                @if (doc) {
+                  <a class="doc-pill" [attr.data-status]="doc.status" [href]="doc.directUrl" target="_blank" rel="noopener" [title]="doc.title">{{ doc.status }} ↗</a>
+                  <small>{{ doc.ownerName || '—' }} <button type="button" class="doc-edit" aria-label="Edit document" (click)="edit(doc)">Edit</button></small>
+                } @else {
+                  <button type="button" class="doc-pill" data-status="Missing" (click)="newDocument(project.id, type)">+ Add</button>
+                }
+              </td>
+            }
+          </tr>
+        } @empty { <tr><td [attr.colspan]="documentTypes.length + 1" class="empty">{{ loading() ? 'Loading documentation…' : 'No projects found.' }}</td></tr> }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<dialog #docDialog class="doc-dialog" aria-labelledby="document-form-title" (close)="formOpen.set(false)">
+  <form (ngSubmit)="save()">
+    <header class="doc-dialog-head">
+      <h2 id="document-form-title">{{ editingId() ? 'Edit' : 'Add' }} document</h2>
+      <p>Direct URL must use HTTP or HTTPS.</p>
+    </header>
+    @if (error()) { <p class="live-alert" role="alert">{{ error() }}</p> }
+    <div class="doc-form">
+      <label class="full">Project<select name="projectId" [(ngModel)]="draft.projectId" required><option value="" disabled>Select project</option>@for (project of live.projects(); track project.id) { <option [value]="project.id">{{ project.jiraInitKey }} · {{ project.name }}</option> }</select></label>
+      <label>Document type<select name="documentType" [(ngModel)]="draft.documentType">@for (type of documentTypes; track type) { <option>{{ type }}</option> }</select></label>
+      <label>Status<select name="status" [(ngModel)]="draft.status">@for (status of statuses; track status) { <option>{{ status }}</option> }</select></label>
+      <label class="full">Title<input name="title" [(ngModel)]="draft.title" required placeholder="e.g. Refund test plan v2" /></label>
+      <label class="full">Direct URL<input name="directUrl" type="url" pattern="https?://.*" [(ngModel)]="draft.directUrl" required placeholder="https://" /></label>
+      <label class="full">Owner<select name="owner" [(ngModel)]="draft.ownerId" required><option value="" disabled>Select owner</option>@for (owner of live.qaMembers(); track owner.id) { <option [value]="owner.id">{{ owner.name }}</option> }</select></label>
+    </div>
+    <footer class="doc-dialog-actions">
+      @if (editingId()) { <button type="button" class="secondary doc-delete" (click)="remove()">Delete</button> }
+      <span></span>
+      <button type="button" class="secondary" (click)="docDialog.close()">Cancel</button>
+      <button type="submit" class="primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save document' }}</button>
+    </footer>
+  </form>
+</dialog>
