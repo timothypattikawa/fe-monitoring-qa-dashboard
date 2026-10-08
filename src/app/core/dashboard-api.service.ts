@@ -426,6 +426,15 @@ export class DashboardApiService {
       { headers: this.managerHeaders(managerKey) },
     );
   }
+  sendRiskEmail(
+    projectId: string,
+    input: { to: string; cc: string[]; subject: string; body: string },
+    managerKey: string,
+  ): Observable<unknown> {
+    return this.http.post(`${this.base}/projects/${encodeURIComponent(projectId)}/risk-email`, input, {
+      headers: this.managerHeaders(managerKey),
+    });
+  }
   private managerHeaders(managerKey: string) {
     return new HttpHeaders({ 'X-Manager-Key': managerKey });
   }

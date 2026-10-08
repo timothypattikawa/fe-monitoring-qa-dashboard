@@ -155,6 +155,11 @@
         <span
           ><small>QASE RUNS</small><strong>{{ p.testRuns.length }}</strong></span
         >
+        @if (isRisk(p)) {
+          <button class="risk-mail-btn" type="button" (click)="openRiskEmail(p)" title="Kirim email peringatan project berisiko">
+            <span class="risk-mail-icon" aria-hidden="true">⚠</span> Send alert email
+          </button>
+        }
         <button class="secondary btn-green" (click)="openProject(p)">Project detail ↗</button>
       </footer>
     </article>
@@ -244,3 +249,25 @@
     </div>
   }
 </section>
+
+<dialog #riskDialog class="risk-mail-dialog" (close)="closeRiskEmail()">
+  @if (riskProject(); as rp) {
+    <form (submit)="$event.preventDefault(); sendRiskEmail()">
+      <h2><span aria-hidden="true">⚠</span> Alert email · {{ rp.key }}</h2>
+      <p class="risk-mail-hint">Review dan edit isi email sebelum dikirim.</p>
+      <label>To <input type="email" name="to" required placeholder="penerima@email.com" [ngModel]="emailTo()" (ngModelChange)="emailTo.set($event)" /></label>
+      <label>CC <small>(pisahkan dengan koma, maks 10)</small>
+        <input type="text" name="cc" placeholder="a@email.com, b@email.com" [ngModel]="emailCc()" (ngModelChange)="emailCc.set($event)" />
+      </label>
+      <label>Subject <input type="text" name="subject" required [ngModel]="emailSubject()" (ngModelChange)="emailSubject.set($event)" /></label>
+      <label>Body <textarea name="body" rows="16" required [ngModel]="emailBody()" (ngModelChange)="emailBody.set($event)"></textarea></label>
+      @if (emailNotice()) {
+        <p class="risk-mail-error" role="alert">{{ emailNotice() }}</p>
+      }
+      <div class="risk-mail-actions">
+        <button type="button" class="secondary" (click)="closeRiskEmail()">Cancel</button>
+        <button type="submit" class="risk-mail-btn" [disabled]="emailSending()">{{ emailSending() ? 'Sending…' : 'Send email' }}</button>
+      </div>
+    </form>
+  }
+</dialog>

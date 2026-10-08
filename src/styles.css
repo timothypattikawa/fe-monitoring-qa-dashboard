@@ -3533,3 +3533,62 @@
   .kn-sec .table-scroll { border-top: 1px solid var(--border); }
   .kn-sec td.num, .kn-sec th.num { text-align: right; }
   .kn-empty { padding: 20px 0; text-align: center; }
+
+/* Risk alert email */
+.risk-mail-btn {
+  align-items: center;
+  animation: risk-pulse 1.8s ease-in-out infinite;
+  background: linear-gradient(135deg, #e5484d, #b3122b);
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.55);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 8px;
+  font-weight: 750;
+  gap: 6px;
+  padding: 8px 12px;
+  text-transform: uppercase;
+}
+.risk-mail-btn:disabled { animation: none; opacity: 0.6; cursor: default; }
+.risk-mail-icon { display: inline-block; font-size: 11px; animation: risk-shake 2.4s ease-in-out infinite; }
+@keyframes risk-pulse {
+  70% { box-shadow: 0 0 0 9px rgba(229, 72, 77, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0); }
+}
+@keyframes risk-shake {
+  0%, 82%, 100% { transform: rotate(0); }
+  86%, 94% { transform: rotate(-14deg); }
+  90%, 98% { transform: rotate(14deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .risk-mail-btn, .risk-mail-icon { animation: none; }
+}
+.risk-mail-dialog {
+  border: 0;
+  border-radius: 12px;
+  border-top: 4px solid #e5484d;
+  max-width: 640px;
+  padding: 22px;
+  width: calc(100% - 32px);
+}
+.risk-mail-dialog::backdrop { background: rgba(15, 23, 42, 0.45); }
+.risk-mail-dialog h2 { color: #b3122b; font-size: 15px; margin: 0; }
+.risk-mail-dialog label { display: block; font-size: 10px; font-weight: 700; margin-top: 12px; }
+.risk-mail-dialog input, .risk-mail-dialog textarea {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-sizing: border-box;
+  display: block;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 400;
+  margin-top: 4px;
+  padding: 8px;
+  width: 100%;
+}
+.risk-mail-dialog textarea { font-family: ui-monospace, monospace; resize: vertical; }
+.risk-mail-hint { color: #64748b; font-size: 10px; margin: 4px 0 0; }
+.risk-mail-error { color: #b3122b; font-size: 10px; font-weight: 700; }
+.risk-mail-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
