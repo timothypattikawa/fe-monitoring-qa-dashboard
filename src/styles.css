@@ -553,6 +553,16 @@
   .bug-summary-table .cell-note.note-good {
     color: #539b80;
   }
+  .qa-timeline-table .cell-input {
+    box-sizing: border-box;
+    max-width: 96px;
+    padding: 6px 8px;
+    width: 100%;
+  }
+  .qa-timeline-table select.cell-input {
+    min-width: 72px;
+    width: auto;
+  }
   .environment-execution-summary {
     display: grid;
     gap: 16px;
@@ -956,35 +966,39 @@
     overflow: hidden;
   }
   .brand {
-    display: flex;
-    gap: 10px;
-    align-items: center;
+    display: block;
+    max-width: 205px;
+    padding: 0;
     text-decoration: none;
-    color: #17211d;
-    font-size: 27px;
-    font-weight: 750;
-    letter-spacing: -1px;
-    padding: 0 15px;
+    width: 100%;
   }
-  .brand-symbol {
-    background: #17213a;
-    color: white;
-    width: 37px;
-    height: 39px;
-    border-radius: 12px;
-    font-size: 35px;
-    line-height: 32px;
+  .brand-logo-crop {
+    aspect-ratio: 1000 / 327;
+    background: #fff;
+    display: block;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+  }
+  .brand-logo-full {
+    display: block;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    width: 100%;
+  }
+  .brand-caption {
+    color: #6e788b;
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    line-height: 1.2;
+    margin-top: 3px;
     text-align: center;
   }
-  .brand-symbol span {
-    color: #56d3a4;
-    font-size: 20px;
-  }
-  .brand small {
-    font-size: 8px;
-    letter-spacing: 2.2px;
-    color: #6e788b;
-    margin-top: 1px;
+  .brand-logo-compact {
+    display: none;
   }
   .workspace {
     margin: 35px 0 29px;
@@ -1854,6 +1868,10 @@
     display: inline-block;
     width: 8px;
     height: 8px;
+  }
+  [data-status='Completed'] {
+    --health: #10b981;
+    --health-soft: #d1fae5;
   }
   [data-status='On Track'] {
     --health: #087a5b;
@@ -3533,3 +3551,21 @@
   .kn-sec .table-scroll { border-top: 1px solid var(--border); }
   .kn-sec td.num, .kn-sec th.num { text-align: right; }
   .kn-empty { padding: 20px 0; text-align: center; }
+  .qa-alert-panel { margin-bottom: 24px; }
+  .qa-alert-panel .panel-heading { padding-bottom: 16px; }
+  .qa-alert-content { padding: 0 22px 20px; }
+  .qa-alert-freshness,
+  .qa-email-status { color: var(--muted); font-size: 11px; margin: 0 0 10px; }
+  .qa-alert-project { border-top: 1px solid var(--border); display: grid; gap: 8px; padding: 16px 0; }
+  .qa-alert-project h3 { font-size: 14px; margin: 0; }
+  .qa-alert-text { box-sizing: border-box; font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; min-height: 220px; resize: vertical; width: 100%; }
+  .qa-alert-recipient-label { color: var(--muted); font-size: 12px; font-weight: 650; }
+  .qa-alert-recipients { box-sizing: border-box; min-height: 58px; resize: vertical; width: 100%; }
+  .qa-alert-hint { color: var(--muted); font-size: 10px; }
+  .qa-alert-footer { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  .qa-alert-footer span { color: var(--muted); font-size: 11px; margin-right: auto; }
+  .qa-alert-close { border-top: 1px solid var(--border); padding-top: 12px; }
+  @media (max-width: 560px) {
+    .qa-alert-panel .panel-heading { align-items: flex-start; flex-direction: column; }
+    .qa-alert-content { padding-left: 14px; padding-right: 14px; }
+  }

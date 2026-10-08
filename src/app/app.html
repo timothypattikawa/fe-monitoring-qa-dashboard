@@ -20,9 +20,11 @@
       <rect x="5" y="4" width="14" height="17" rx="2"></rect>
       <path d="M9 4V2h6v2M8 11l2 2 5-5M8 17h8"></path>
     </symbol>
-    <symbol id="nav-bugs" viewBox="0 0 24 24">
-      <path d="M8 9h8v7a4 4 0 0 1-8 0zM10 9V6a2 2 0 0 1 4 0v3"></path>
-      <path d="M4 13h4M16 13h4M5 8l3 2M19 8l-3 2M5 19l3-2M19 19l-3-2"></path>
+    <symbol id="nav-health" viewBox="0 0 24 24">
+      <path
+        d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.5 4.03 3 5.5l7 7Z"
+      ></path>
+      <path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"></path>
     </symbol>
     <symbol id="nav-qa-members" viewBox="0 0 24 24">
       <circle cx="8" cy="8" r="3"></circle>
@@ -58,8 +60,22 @@
 </svg>
 <div class="shell">
   <aside class="sidebar">
-    <a class="brand" routerLink="/projects"><span class="brand-symbol">a<span>•</span></span><span>alfagift<small>QA
-          WORKSPACE</small></span></a>
+    <a class="brand" routerLink="/projects" aria-label="Alfagift QA Workspace">
+      <span class="brand-logo-crop">
+        <img class="brand-logo-full" src="/Alfagift_logo_new.webp" alt="Alfagift · My Groceries Solution" />
+      </span>
+      <span class="brand-caption">QA WORKSPACE</span>
+      <svg class="brand-logo-compact" viewBox="0 25 220 220" aria-hidden="true">
+        <g fill="none" stroke="#ed1c2e" stroke-linecap="round" stroke-width="14">
+          <path d="M114 81c-14-18-44-22-51-36-7-13 2-20 14-11 18 9 31 30 47 47" />
+          <path d="M123 80c17-22 39-42 54-39 18 4 5 20-10 29-16 8-30 12-44 16" />
+        </g>
+        <path fill="#ed1c2e" d="M38 117h157v87H38zM27 81h178v35H27z" />
+        <path fill="#fff" d="M107 81h18v123h-18z" />
+        <path fill="#0b4ea2" d="m40 166-36-18 12 25-12 15 38 12z" />
+        <path fill="#1258a5" stroke="#fff" stroke-linejoin="round" stroke-width="3" d="M25 171c47 10 111-3 158 8 17 4 24 12 12 23 15 12 10 22-7 15-52-20-114-8-164-17z" />
+      </svg>
+    </a>
     <div class="workspace">
       <span class="workspace-icon"><svg aria-hidden="true">
           <use href="#nav-testing"></use>

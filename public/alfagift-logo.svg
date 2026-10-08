@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 715 277" role="img" aria-labelledby="title desc">
+  <title id="title">Alfagift</title>
+  <desc id="desc">Alfagift My Groceries Solution</desc>
+  <g fill="none" stroke="#ed1c2e" stroke-linecap="round" stroke-width="14">
+    <path d="M148 81c-14-18-44-22-51-36-7-13 2-20 14-11 18 9 31 30 47 47"/>
+    <path d="M157 80c17-22 39-42 54-39 18 4 5 20-10 29-16 8-30 12-44 16"/>
+  </g>
+  <path fill="#ed1c2e" d="M72 117h155v87H72zM61 81h177v35H61z"/>
+  <path fill="#fff" d="M140 81h18v123h-18z"/>
+  <path fill="#0b4ea2" d="m65 167-37-18 12 25-13 15 39 12z"/>
+  <path fill="#1258a5" stroke="#fff" stroke-linejoin="round" stroke-width="3" d="M50 177c46 9 111-4 157 8 17 4 25 12 13 23 15 12 10 22-7 15-52-20-115-8-165-17z"/>
+  <text x="47" y="218" textLength="183" lengthAdjust="spacing" fill="#fff" font-family="Trebuchet MS, Myriad Pro, Arial Rounded MT Bold, Arial, sans-serif" font-size="18" font-style="italic" font-weight="700" transform="rotate(-3 47 218)">My Groceries Solution</text>
+  <text x="250" y="196" textLength="220" lengthAdjust="spacingAndGlyphs" fill="#155eaa" font-family="VAG Rounded, Fredoka, Nunito, Arial Rounded MT Bold, Arial, sans-serif" font-size="108" font-weight="900" letter-spacing="-5">Alfa</text>
+  <text x="472" y="198" textLength="210" lengthAdjust="spacingAndGlyphs" fill="#ed1c2e" font-family="Kaufmann BT, Lobster Two, Segoe Script, Brush Script MT, cursive" font-size="116" font-style="italic" font-weight="700">gift</text>
+</svg>

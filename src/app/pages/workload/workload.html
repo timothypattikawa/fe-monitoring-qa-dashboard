@@ -33,9 +33,8 @@
             <div>
               <h2>Execution distribution by QA</h2>
               <p>
-                Share of the last {{ state.workloadDates.length }} days' recorded Qase
-                execution per QA — planned-hours capacity isn't tracked yet, so this uses real
-                execution volume instead.
+                Share of today's recorded Qase execution per QA — planned-hours capacity isn't
+                tracked yet, so this uses real execution volume instead.
               </p>
             </div>
           </div>
@@ -46,34 +45,29 @@
           >
             @for (m of pagedDistribution(); track m.name) {
               @let pressure = state.executionSharePressure(m.name);
-              <div class="workload-chart-row" tabindex="0">
+              <div
+                class="workload-chart-row"
+                tabindex="0"
+                [attr.aria-label]="
+                  m.name + ' executed ' + state.memberExecutedToday(m.name) + ' tests today'
+                "
+              >
                 <div class="chart-person">
                   <span class="avatar small" [class]="'avatar small ' + m.color">{{
                     m.initials
                   }}</span>
                   <span
                     ><strong>{{ m.name }}</strong
-                    ><small
-                      >{{ state.memberExecutedTotal(m.name) }} executed ·
-                      {{ state.memberActiveDays(m.name) }}/{{ state.workloadDates.length }} days
-                      active</small
-                    ></span
+                    ><small>{{ state.memberExecutedToday(m.name) }} executed today</small></span
                   >
                 </div>
-                <svg
-                  class="capacity-sparkline"
-                  viewBox="0 0 100 32"
-                  preserveAspectRatio="none"
-                  [attr.aria-label]="
-                    m.name + ' executed ' + state.memberExecutedTotal(m.name) + ' tests across ' +
-                    state.workloadDates.length + ' days'
-                  "
-                >
-                  <polyline
-                    class="trend-line exec"
-                    [attr.points]="state.executionSharePoints(m.name)"
-                  />
-                </svg>
+                <div class="chart-track">
+                  <i
+                    [style.width.%]="
+                      state.percent(state.memberExecutedToday(m.name), state.distributionMax())
+                    "
+                  ></i>
+                </div>
                 <strong class="chart-value">{{ state.memberExecutionShare(m.name) }}%</strong>
                 <span class="pressure-pill" [attr.data-level]="pressure.level">{{
                   pressure.label
@@ -107,7 +101,7 @@
             </div>
           }
           <p class="workload-method-note">
-            Execution share = a QA's executed tests ÷ team's total executed tests over the period.
+            Execution share = a QA's executed tests ÷ team's total executed tests today.
             "Balanced" means close to an even split across the team; "High/Low share" flags QA
             running well above or below that.
           </p>
@@ -326,7 +320,7 @@
                 </div>
                 <footer>
                   <span>{{ m.qaseMapped ? activity.runs + ' active test runs' : 'Not mapped to Qase' }}</span>
-                  <button class="secondary" (click)="state.openMember(m)">
+                  <button class="primary" (click)="state.openMember(m)">
                     View QA activity ↗
                   </button>
                 </footer>

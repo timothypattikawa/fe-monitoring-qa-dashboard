@@ -15,6 +15,11 @@ describe('DashboardState project execution', () => {
       passed: 90,
       failed: 20,
       blocked: 15,
+      skipped: 0,
+      cancelled: 0,
+      retest: 0,
+      invalid: 0,
+      inProgress: 0,
       total: 100,
       notRun: 0,
     });

@@ -29,6 +29,8 @@ describe('QA dashboard data boundary', () => {
     const router = TestBed.inject(Router);
     const http = TestBed.inject(HttpTestingController);
     await router.navigateByUrl('/projects');
+    fixture.detectChanges();
+    http.expectOne('/api/v1/qa-alert-email/status').flush({ configured: false });
     http.expectOne('/api/v1/projects').flush({ asOf: null, sources: {}, data: [] });
     http.expectOne('/api/v1/workflow').flush({ asOf: null, sources: {}, data: { days: [] } });
     http
@@ -236,7 +238,7 @@ describe('QA dashboard data boundary', () => {
       jira: { status: 'never_synced', syncedAt: null },
       qase: { status: 'never_synced', syncedAt: null },
     };
-    state.page.set('Bugs');
+    state.page.set('Quality Health');
     store.managerKey.set('test-manager-key');
     store.sync();
     store.sync();
@@ -261,6 +263,7 @@ describe('QA dashboard data boundary', () => {
       sources,
       data: { items: [], page: 1, pageSize: 20, total: 0 },
     });
+    http.expectOne('/api/v1/qa-timeline').flush({ asOf: null, sources, data: [] });
     expect(store.submitting()).toBe(false);
     http.verify();
   });

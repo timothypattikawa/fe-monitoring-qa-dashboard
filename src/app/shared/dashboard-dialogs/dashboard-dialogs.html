@@ -91,7 +91,7 @@
                 <td class="success-text">{{ run.passed }}</td>
                 <td class="red-text">{{ run.failed }}</td>
                 <td>{{ run.blocked }}</td>
-                <td>{{ run.total - run.passed - run.failed - run.blocked }}</td>
+                <td>{{ state.runNotRun(run) }}</td>
                 <td>
                   <strong>{{ run.passed + run.failed }}</strong>
                 </td>
@@ -251,9 +251,10 @@
                   ><i class="failed" [style.width.%]="state.percent(run.failed, run.total)"></i>
                 </div>
                 <small
-                  >{{ run.blocked }} blocked ·
-                  {{ run.total - run.passed - run.failed - run.blocked }} not run ·
-                  {{ run.elapsed }}</small
+                  >{{ run.blocked }} blocked · {{ run.skipped ?? 0 }} skipped ·
+                  {{ run.cancelled ?? 0 }} cancelled · {{ run.retest ?? 0 }} retest ·
+                  {{ run.invalid ?? 0 }} invalid · {{ run.inProgress ?? 0 }} in progress ·
+                  {{ state.runNotRun(run) }} not run · {{ run.elapsed }}</small
                 >
               </article>
             } @empty {
@@ -276,7 +277,7 @@
           <div class="environment-facts">
             <span>Velocity {{ p.betaVelocity.toFixed(1) }}%/day</span
             ><span>Required {{ p.betaRequiredVelocity.toFixed(1) }}%/day</span
-            ><span>{{ p.total - p.passed - p.failed - p.blocked }} remaining</span
+            ><span>{{ state.projectNotRun(p) }} remaining</span
             ><span>ETA {{ p.betaEta }}</span
             ><span>{{ state.timeRemaining(p.betaDaysLeft) }}</span>
           </div>
@@ -296,9 +297,10 @@
                   ><i class="failed" [style.width.%]="state.percent(run.failed, run.total)"></i>
                 </div>
                 <small
-                  >{{ run.blocked }} blocked ·
-                  {{ run.total - run.passed - run.failed - run.blocked }} not run ·
-                  {{ run.elapsed }}</small
+                  >{{ run.blocked }} blocked · {{ run.skipped ?? 0 }} skipped ·
+                  {{ run.cancelled ?? 0 }} cancelled · {{ run.retest ?? 0 }} retest ·
+                  {{ run.invalid ?? 0 }} invalid · {{ run.inProgress ?? 0 }} in progress ·
+                  {{ state.runNotRun(run) }} not run · {{ run.elapsed }}</small
                 >
               </article>
             } @empty {
@@ -564,7 +566,7 @@
                   <td class="success-text">{{ run.passed }}</td>
                   <td class="red-text">{{ run.failed }}</td>
                   <td>{{ run.blocked }}</td>
-                  <td>{{ run.total - run.passed - run.failed - run.blocked }}</td>
+                  <td>{{ state.runNotRun(run) }}</td>
                   <td>
                     <strong>{{ run.passed + run.failed }}</strong>
                   </td>
