@@ -14,7 +14,11 @@ export const routes: Routes = [
     path: 'workload',
     loadComponent: () => import('./pages/workload/workload').then((m) => m.WorkloadPage),
   },
-  { path: 'bugs', loadComponent: () => import('./pages/bugs/bugs').then((m) => m.BugsPage) },
+  { path: 'bugs', redirectTo: 'quality-health' },
+  {
+    path: 'quality-health',
+    loadComponent: () => import('./pages/bugs/bugs').then((m) => m.BugsPage),
+  },
   {
     path: 'qa-members',
     loadComponent: () => import('./pages/qa-members/qa-members').then((m) => m.QaMembersPage),

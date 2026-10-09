@@ -222,14 +222,23 @@ main {
     padding: 25px 10px;
   }
   .brand {
-    padding: 0;
+    align-items: center;
+    display: flex;
     justify-content: center;
+    max-width: none;
+    padding: 0;
   }
-  .brand > span:last-child,
+  .brand-logo-crop,
+  .brand-caption,
   .workspace,
   .nav-label,
   .sidebar-bottom {
     display: none;
+  }
+  .brand-logo-compact {
+    display: block;
+    height: 52px;
+    width: 49px;
   }
   nav {
     margin-top: 35px;
@@ -267,18 +276,15 @@ main {
     margin-left: 0;
     font-size: 10px;
   }
-  .brand-symbol {
-    flex-shrink: 0;
-  }
 }
 @media (max-width: 600px) {
   .sidebar {
     width: 55px;
     padding-inline: 5px;
   }
-  .brand-symbol {
-    width: 32px;
-    height: 35px;
+  .brand-logo-compact {
+    height: 42px;
+    width: 38px;
   }
   .topbar {
     height: 60px;

@@ -47,6 +47,53 @@
     }
   </div>
 </section>
+<section class="panel spaced-panel qa-alert-panel" aria-labelledby="qa-alert-title">
+  <div class="panel-heading">
+    <div>
+      <h2 id="qa-alert-title">Daily QA alert</h2>
+      <p>Generate a copyable alert for projects behind schedule, at risk, or overdue.</p>
+    </div>
+    <button class="primary" (click)="openAlert()">Generate alert ({{ alerts().length }})</button>
+  </div>
+  @if (alertOpen()) {
+    <div class="qa-alert-content">
+      <p class="qa-alert-freshness" role="status">{{ alertFreshness() }}</p>
+      <p class="qa-email-status" role="status">{{ emailProviderMessage() }}</p>
+      @for (alert of alerts(); track alert.projectId) {
+        <article class="qa-alert-project">
+          <h3>{{ alert.key }} · {{ alert.name }}</h3>
+          <textarea class="qa-alert-text" [attr.aria-label]="'QA alert for ' + alert.key" readonly [value]="alert.body"></textarea>
+          <label class="qa-alert-recipient-label" [for]="'qa-alert-recipients-' + alert.projectId">Recipients</label>
+          <textarea
+            class="qa-alert-recipients"
+            [id]="'qa-alert-recipients-' + alert.projectId"
+            [ngModel]="recipientInput(alert.projectId)"
+            (ngModelChange)="setRecipients(alert.projectId, $event)"
+            placeholder="qa@example.com; pic@example.com"
+            rows="2"
+          ></textarea>
+          <small class="qa-alert-hint">Pisahkan beberapa alamat dengan koma, titik koma, atau baris baru. Daftar hanya berlaku untuk pengiriman ini.</small>
+          <div class="qa-alert-footer">
+            <span role="status">{{ emailFeedback(alert.projectId) }}</span>
+            <button class="secondary" (click)="copyAlert(alert)">Copy alert</button>
+            <button
+              class="primary"
+              [disabled]="!emailConfigured() || !recipientInput(alert.projectId).trim() || sendingProjectId() !== ''"
+              (click)="sendAlert(alert)"
+            >
+              {{ sendingProjectId() === alert.projectId ? 'Sending…' : 'Send email' }}
+            </button>
+          </div>
+        </article>
+      } @empty {
+        <p class="empty" role="status">Tidak ada project Behind/At Risk atau environment overdue pada snapshot ini.</p>
+      }
+      <div class="qa-alert-footer qa-alert-close">
+        <button class="secondary" (click)="closeAlert()">Close</button>
+      </div>
+    </div>
+  }
+</section>
 <section class="project-detail-grid" aria-label="Detailed QA projects">
   @for (p of pagedCards(); track p.key) {
     @let staging = state.environmentStats(p, 'STAGING');
@@ -79,7 +126,8 @@
       <div class="project-environment-overview">
         @for (environment of ['STAGING', 'BETA']; track environment) {
           @let stats = environment === 'STAGING' ? staging : beta;
-          @let progress = state.executionPercent(stats.passed, stats.failed, stats.total);
+          @let covered = stats.total - stats.notRun;
+          @let progress = state.percent(covered, stats.total);
           <section [attr.data-status]="state.environmentHealth(p, $any(environment))">
             <div class="environment-overview-heading">
               <b>{{ environment }}</b>
@@ -88,7 +136,7 @@
             <div class="environment-progress-highlight">
               <strong>{{ progress }}%</strong>
               <span
-                ><b>{{ stats.passed + stats.failed }}</b> / {{ stats.total }} executed</span
+                ><b>{{ covered }}</b> / {{ stats.total }} covered</span
               >
             </div>
             <div class="project-progress"><i [style.width.%]="progress"></i></div>
@@ -160,7 +208,7 @@
             <span class="risk-mail-icon" aria-hidden="true">⚠</span> Send alert email
           </button>
         }
-        <button class="secondary btn-green" (click)="openProject(p)">Project detail ↗</button>
+        <button class="primary" (click)="openProject(p)">Project detail ↗</button>
       </footer>
     </article>
   } @empty {

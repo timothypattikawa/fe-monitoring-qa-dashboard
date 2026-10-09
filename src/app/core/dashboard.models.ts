@@ -7,12 +7,17 @@ export type TestRun = {
   passed: number;
   failed: number;
   blocked: number;
+  skipped?: number;
+  retest?: number;
+  invalid?: number;
+  inProgress?: number;
+  cancelled?: number;
   total: number;
   elapsed: string;
 };
 
 export type Environment = TestRun['environment'];
-export type ProjectHealth = 'On Track' | 'At Risk' | 'Behind' | 'Stalled' | 'No Target Set';
+export type ProjectHealth = 'Completed' | 'On Track' | 'At Risk' | 'Behind' | 'Stalled' | 'No Target Set';
 export type TestCaseAuthor = { name: string; count: number };
 export type DailyExecution = {
   date: string;
@@ -46,6 +51,11 @@ export type Project = {
   passed: number;
   failed: number;
   blocked: number;
+  skipped?: number;
+  retest?: number;
+  invalid?: number;
+  inProgress?: number;
+  cancelled?: number;
   total: number;
   fresh: number;
   indexed: number;
@@ -73,8 +83,28 @@ export type Project = {
   testCaseAuthors: TestCaseAuthor[];
   testRuns: TestRun[];
   dailyExecutions: DailyExecution[];
-  stagingCounts: { passed: number; failed: number; blocked: number; total: number };
-  betaCounts: { passed: number; failed: number; blocked: number; total: number };
+  stagingCounts: {
+    passed: number;
+    failed: number;
+    blocked: number;
+    skipped?: number;
+    retest?: number;
+    invalid?: number;
+    inProgress?: number;
+    cancelled?: number;
+    total: number;
+  };
+  betaCounts: {
+    passed: number;
+    failed: number;
+    blocked: number;
+    skipped?: number;
+    retest?: number;
+    invalid?: number;
+    inProgress?: number;
+    cancelled?: number;
+    total: number;
+  };
   assigneeProgress: {
     environment: Environment;
     name: string;

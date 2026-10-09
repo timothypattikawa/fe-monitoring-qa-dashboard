@@ -7,6 +7,7 @@ import {
   DashboardApiService,
   PaginatedBugs,
   QaMember,
+  QaTimelineRow,
   SourceStatus,
   SyncJob,
   WorkflowDay,
@@ -31,6 +32,8 @@ export class LiveDashboardStore {
   readonly bugs = signal<ApiBug[]>([]);
   readonly productionBugs = signal<PaginatedBugs>({ items: [], page: 1, pageSize: 20, total: 0 });
   readonly productionBugsLoading = signal(false);
+  readonly qaTimeline = signal<QaTimelineRow[]>([]);
+  readonly qaTimelineLoading = signal(false);
   readonly jobs = signal<SyncJob[]>([]);
   readonly qaMembers = signal<QaMember[]>([]);
   readonly selectedProject = signal<ApiProject | null>(null);
@@ -124,6 +127,16 @@ export class LiveDashboardStore {
         error: (error: HttpErrorResponse) => this.error.set(this.message(error)),
       });
   }
+  loadQaTimeline() {
+    this.qaTimelineLoading.set(true);
+    this.api
+      .qaTimeline()
+      .pipe(finalize(() => this.qaTimelineLoading.set(false)))
+      .subscribe({
+        next: (response) => this.qaTimeline.set(response.data ?? []),
+        error: (error: HttpErrorResponse) => this.error.set(this.message(error)),
+      });
+  }
   /**
    * The single, global sync: overview (jira+qase) AND the expensive Qase
    * detail tier, for every registered project, in one job — so every other
@@ -185,8 +198,9 @@ export class LiveDashboardStore {
         this.refresh(() => {
           this.submitting.set(false);
           this.syncingJob.set(null);
-          if (this.state.page() === 'Bugs') {
+          if (this.state.page() === 'Quality Health') {
             this.loadProductionBugs(this.productionBugs().page);
+            this.loadQaTimeline();
           }
         });
       },

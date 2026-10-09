@@ -18,6 +18,11 @@ export type ApiProjectRun = {
   passed: number;
   failed: number;
   blocked: number;
+  skipped?: number;
+  retest?: number;
+  invalid?: number;
+  inProgress?: number;
+  cancelled?: number;
   total: number;
   startedAt: string | null;
   finishedAt: string | null;
@@ -37,13 +42,44 @@ export type ApiProject = {
   betaStartAt: string;
   betaEndAt: string;
   projectSize?: string | null;
+  timelinePlanDays?: number | null;
   stagingMtttMinutes?: number | null;
   betaMtttMinutes?: number | null;
   runs?: ApiProjectRun[];
   countsAvailable: boolean;
-  counts: { passed: number; failed: number; blocked: number; total: number };
-  stagingCounts?: { passed: number; failed: number; blocked: number; total: number };
-  betaCounts?: { passed: number; failed: number; blocked: number; total: number };
+  counts: {
+    passed: number;
+    failed: number;
+    blocked: number;
+    skipped?: number;
+    retest?: number;
+    invalid?: number;
+    inProgress?: number;
+    cancelled?: number;
+    total: number;
+  };
+  stagingCounts?: {
+    passed: number;
+    failed: number;
+    blocked: number;
+    skipped?: number;
+    retest?: number;
+    invalid?: number;
+    inProgress?: number;
+    cancelled?: number;
+    total: number;
+  };
+  betaCounts?: {
+    passed: number;
+    failed: number;
+    blocked: number;
+    skipped?: number;
+    retest?: number;
+    invalid?: number;
+    inProgress?: number;
+    cancelled?: number;
+    total: number;
+  };
   bugSummary?: {
     staging: number;
     beta: number;
@@ -161,6 +197,26 @@ export type BugFilters = {
   page?: number;
   pageSize?: number;
 };
+export type QaTimelineHoliday = { date: string; name: string };
+export type QaTimelineRow = {
+  projectId: string;
+  jiraInitKey: string;
+  name: string;
+  projectSize: string | null;
+  timelinePlanDays: number | null;
+  qaStartAt: string | null;
+  qaEndAt: string | null;
+  calendarDays: number;
+  weekendDays: number;
+  holidayDays: number;
+  workingDays: number;
+  holidays: QaTimelineHoliday[];
+  totalScenarios: number;
+};
+export type ProjectPlanningUpdate = {
+  projectSize?: string | null;
+  timelinePlanDays?: number | null;
+};
 export type QaDocument = {
   id: string;
   projectId: string;
@@ -277,6 +333,8 @@ export interface QaMemberInput {
 export type QaMemberSaveResult = QaMember & {
   warnings?: { qaseDisplayName?: string; jiraEmail?: string };
 };
+export type QaAlertEmailStatus = { configured: boolean };
+export type QaAlertEmailResult = { status: 'sent'; recipients: string[] };
 
 @Injectable({ providedIn: 'root' })
 export class DashboardApiService {
@@ -344,6 +402,40 @@ export class DashboardApiService {
     return this.http.post<ApiProject>(`${this.base}/projects`, input, {
       headers: new HttpHeaders({ 'X-Manager-Key': managerKey }),
     });
+  }
+  updateProject(
+    id: string,
+    changes: ProjectPlanningUpdate,
+    managerKey: string,
+  ): Observable<ApiProject> {
+    return this.http.patch<ApiProject>(
+      `${this.base}/projects/${encodeURIComponent(id)}`,
+      changes,
+      { headers: this.managerHeaders(managerKey) },
+    );
+  }
+  qaTimeline(): Observable<ApiResponse<QaTimelineRow[]>> {
+    return this.http.get<ApiResponse<QaTimelineRow[]>>(`${this.base}/qa-timeline`);
+  }
+  qaAlertEmailStatus(): Observable<QaAlertEmailStatus> {
+    return this.http.get<QaAlertEmailStatus>(`${this.base}/qa-alert-email/status`);
+  }
+  sendProjectQaAlertEmail(
+    projectId: string,
+    recipients: string[],
+    body: string,
+    managerKey: string,
+  ): Observable<QaAlertEmailResult> {
+    return this.http.post<QaAlertEmailResult>(
+      `${this.base}/projects/${encodeURIComponent(projectId)}/qa-alert-email`,
+      { recipients, body },
+      {
+        headers: new HttpHeaders({
+          'X-Manager-Key': managerKey,
+          'Idempotency-Key': crypto.randomUUID(),
+        }),
+      },
+    );
   }
   qaMembers(includeInactive = false): Observable<ApiResponse<QaMember[]>> {
     return this.http.get<ApiResponse<QaMember[]>>(`${this.base}/qa-members`, {

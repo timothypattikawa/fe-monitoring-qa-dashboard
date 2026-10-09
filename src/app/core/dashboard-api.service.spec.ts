@@ -80,6 +80,23 @@ describe('DashboardApiService', () => {
     });
   });
 
+  it('checks whether project alert email delivery is configured', () => {
+    service.qaAlertEmailStatus().subscribe((status) => expect(status.configured).toBe(false));
+    const req = http.expectOne('/api/v1/qa-alert-email/status');
+    expect(req.request.method).toBe('GET');
+    req.flush({ configured: false });
+  });
+
+  it('posts a project alert email with recipients and manager authorization', () => {
+    service.sendProjectQaAlertEmail('project-1', ['qa@example.com'], 'Alert body', 'secret-key').subscribe();
+    const req = http.expectOne('/api/v1/projects/project-1/qa-alert-email');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ recipients: ['qa@example.com'], body: 'Alert body' });
+    expect(req.request.headers.get('X-Manager-Key')).toBe('secret-key');
+    expect(req.request.headers.get('Idempotency-Key')).toBeTruthy();
+    req.flush({ status: 'sent', recipients: ['qa@example.com'] });
+  });
+
   it('fetches knowledge projects as plain JSON', () => {
     let out: unknown;
     TestBed.inject(DashboardApiService).knowledgeProjects().subscribe((r) => (out = r));

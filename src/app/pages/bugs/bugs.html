@@ -25,17 +25,12 @@
           <tr>
             <td>
               <span class="badge">{{ project.key }}</span> <strong>{{ project.name }}</strong>
-              <br /><small class="cell-note"
-                >Domain: {{ project.domain }} • Target: {{ project.version }}</small
-              >
             </td>
             <td>
               <strong>{{ project.stagingBugs }}</strong>
-              <br /><small class="cell-note">{{ stagingShare(project) }}% share</small>
             </td>
             <td>
               <strong>{{ project.betaBugs }}</strong>
-              <br /><small class="cell-note">{{ betaShare(project) }}% share</small>
             </td>
             <td>
               <span
@@ -47,25 +42,12 @@
                   betaOverStaging(project)
                 }}%)
               </span>
-              <br /><small
-                class="cell-note"
-                [class.note-bad]="state.betaBugThreshold(project)"
-                [class.note-good]="!state.betaBugThreshold(project)"
-                >{{ state.betaBugThreshold(project) ? 'Exceeded' : 'Safe' }} ({{
-                  betaOverStagingDelta(project)
-                }}%)</small
-              >
             </td>
             <td>
               <strong>{{ project.bugs }}</strong>
-              <br /><small class="cell-note"
-                >{{ project.stagingBugs + project.betaBugs }} Pre-prod + {{ prodBugs(project) }}
-                Prod</small
-              >
             </td>
             <td>
               <strong>{{ project.canceledBugs }}</strong>
-              <br /><small class="cell-note">Noise: {{ noisePercent(project) }}%</small>
             </td>
           </tr>
         } @empty {
@@ -93,6 +75,133 @@
           class="secondary"
           [disabled]="summaryPage() >= summaryPageCount()"
           (click)="summaryPage.set(currentSummaryPage() + 1)"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  }
+</section>
+
+<section class="panel spaced-panel" aria-labelledby="qa-timeline-title">
+  <div class="panel-heading">
+    <div>
+      <h2 id="qa-timeline-title">
+        QA timeline &amp; scenario <span class="badge success">AUTO FROM STG RUNS</span>
+      </h2>
+      <p>
+        Start/End QA diambil otomatis dari semua test run Qase ber-prefix STG. Hari kerja =
+        rentang kalender − weekend − tanggal merah (cuti bersama tidak mengurangi).
+      </p>
+    </div>
+    <span class="source-tag">Qase</span>
+  </div>
+  <div class="table-scroll">
+    <table class="bug-summary-table qa-timeline-table">
+      <thead>
+        <tr>
+          <th>PROJECT / INITIATIVE</th>
+          <th>START QA</th>
+          <th>END QA</th>
+          <th>HARI KERJA</th>
+          <th>PLAN (MAN DAYS)</th>
+          <th>SIZE</th>
+          <th>TOTAL SCENARIO</th>
+          <th>PLAN VS AKTUAL</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of pagedTimeline(); track row.projectId) {
+          <tr>
+            <td>
+              <span class="badge">{{ row.jiraInitKey }}</span> <strong>{{ row.name }}</strong>
+            </td>
+            <td>{{ row.qaStartAt ? state.dateLabel(row.qaStartAt) : '—' }}</td>
+            <td>{{ row.qaEndAt ? state.dateLabel(row.qaEndAt) : '—' }}</td>
+            <td>
+              <strong>{{ row.qaStartAt ? row.workingDays : '—' }}</strong>
+              @if (row.qaStartAt) {
+                <br /><small class="cell-note" [title]="holidayTooltip(row)"
+                  >{{ row.calendarDays }}d kalender − {{ row.weekendDays }} weekend −
+                  {{ row.holidayDays }} libur</small
+                >
+              }
+            </td>
+            <td>
+              <input
+                class="cell-input"
+                type="number"
+                min="0"
+                step="0.5"
+                placeholder="—"
+                aria-label="Timeline plan man days"
+                [ngModel]="draftFor(row).plan"
+                (ngModelChange)="setPlanDraft(row, $event)"
+                (change)="savePlanning(row)"
+                [disabled]="timelineSaving() === row.projectId"
+              />
+            </td>
+            <td>
+              <select
+                class="cell-input"
+                aria-label="Project size"
+                [ngModel]="draftFor(row).size"
+                (ngModelChange)="setSizeDraft(row, $event)"
+                [disabled]="timelineSaving() === row.projectId"
+              >
+                <option value="">—</option>
+                @for (size of sizes; track size) {
+                  <option [value]="size">{{ size }}</option>
+                }
+              </select>
+            </td>
+            <td>
+              <strong>{{ row.totalScenarios }}</strong>
+              <br /><small class="cell-note">test cases</small>
+            </td>
+            <td>
+              <span
+                class="badge"
+                [class.danger]="(planDelta(row) ?? 0) > 0"
+                [class.info]="(planDelta(row) ?? 0) <= 0"
+              >
+                {{ planDeltaLabel(row) }}
+              </span>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8" class="empty">
+              {{ live.qaTimelineLoading() ? 'Loading QA timeline…' : 'No registered projects.' }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (timelineError()) {
+    <p class="live-alert" role="alert">{{ timelineError() }}</p>
+  }
+  @if (filteredTimeline().length > 0) {
+    <div class="table-pagination">
+      <span>
+        Page {{ currentTimelinePage() }} of {{ timelinePageCount() }} ({{
+          filteredTimeline().length
+        }}
+        projects)
+      </span>
+      <div class="table-pagination-actions">
+        <button
+          class="secondary"
+          [disabled]="currentTimelinePage() <= 1"
+          (click)="timelinePage.set(currentTimelinePage() - 1)"
+        >
+          Previous
+        </button>
+        <button
+          class="secondary"
+          [disabled]="currentTimelinePage() >= timelinePageCount()"
+          (click)="timelinePage.set(currentTimelinePage() + 1)"
         >
           Next
         </button>
